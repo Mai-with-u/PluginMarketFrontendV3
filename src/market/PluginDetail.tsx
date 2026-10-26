@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import type { Components } from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
 import { Monogram, CopyRepoButton } from "../components/parts.tsx";
@@ -17,44 +19,131 @@ const markdownComponents: Components = {
       {children}
     </a>
   ),
-  img: ({ src, alt }) => (
-    <img src={src} alt={alt ?? ""} loading="lazy" referrerPolicy="no-referrer" />
+  // README 里写的 width / height 要保留，徽章和 logo 才不会按原图尺寸铺开
+  img: ({ src, alt, width, height, title }) => (
+    <img
+      src={src}
+      alt={alt ?? ""}
+      width={width}
+      height={height}
+      title={title}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+    />
   ),
 };
 
+/** raw.githubusercontent.com 区分大小写，依次试常见写法 */
+const README_NAMES = ["README.md", "readme.md", "Readme.md"];
+const readmes = new Map<string, Promise<string>>();
+
+function cached(key: string): string | null {
+  try {
+    return sessionStorage.getItem(`readme:${key}`);
+  } catch {
+    return null;
+  }
+}
+
+function remember(key: string, text: string): string {
+  try {
+    sessionStorage.setItem(`readme:${key}`, text);
+  } catch {
+    // 存储满了或被禁用时只靠内存缓存
+  }
+  return text;
+}
+
+async function get(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, credentials: "omit" });
+  } catch {
+    throw new Error("无法连接 GitHub，可稍后重试。");
+  }
+}
+
+/**
+ * 先读 raw.githubusercontent.com：不占 GitHub API 每个 IP 每小时 60 次的匿名额度，
+ * MaiBot 自带的插件市场也是这样读的。文件名都对不上时才用 API 查找。
+ */
+async function fetchReadme(repository: string, ref: string, key: string): Promise<string> {
+  const saved = cached(key);
+  if (saved !== null) return saved;
+  let found: Response | undefined;
+  for (const name of README_NAMES) {
+    // 依次尝试，命中即停，不需要并发
+    // oxlint-disable-next-line eslint/no-await-in-loop
+    const response = await get(`https://raw.githubusercontent.com/${repository}/${ref}/${name}`);
+    if (response.ok) {
+      found = response;
+      break;
+    }
+    if (response.status !== 404) throw new Error(`GitHub 文档读取失败（${response.status}）。`);
+  }
+  if (found) return remember(key, await found.text());
+  const query = ref === "HEAD" ? "" : `?ref=${encodeURIComponent(ref)}`;
+  const response = await get(`https://api.github.com/repos/${repository}/readme${query}`, {
+    headers: { Accept: "application/vnd.github.raw+json" },
+  });
+  if (response.ok) return remember(key, await response.text());
+  if (response.status === 404) throw new Error("此版本没有 README。");
+  if (response.headers.get("x-ratelimit-remaining") === "0") {
+    const reset = Number(response.headers.get("x-ratelimit-reset")) * 1000;
+    const minutes = Math.max(1, Math.ceil((reset - Date.now()) / 60000));
+    throw new Error(`GitHub 访问次数已达上限，约 ${minutes} 分钟后恢复。`);
+  }
+  throw new Error(`GitHub 文档读取失败（${response.status}）。`);
+}
+
+/** 同一仓库同一版本只读一次，本次会话内重复打开直接用缓存；失败的不缓存，下次可重试 */
+function loadReadme(repository: string, ref: string): Promise<string> {
+  const key = `${repository}@${ref}`;
+  let pending = readmes.get(key);
+  if (pending === undefined) {
+    pending = fetchReadme(repository, ref, key);
+    readmes.set(key, pending);
+    void pending.then(undefined, () => readmes.delete(key));
+  }
+  return pending;
+}
+
 function Readme({ repository, commit }: { repository: string; commit?: string }) {
+  const ref = commit ?? "HEAD";
   const [result, setResult] = useState<{ text?: string; error?: string }>();
   useEffect(() => {
-    const controller = new AbortController();
-    const ref = commit ? `?ref=${encodeURIComponent(commit)}` : "";
-    void fetch(`https://api.github.com/repos/${repository}/readme${ref}`, {
-      headers: { Accept: "application/vnd.github.raw+json" },
-      signal: controller.signal,
-      credentials: "omit",
-    })
-      .then(async (response) => {
-        if (!response.ok)
-          throw new Error(
-            response.status === 404
-              ? "此版本没有 README。"
-              : `GitHub 文档读取失败（${response.status}），可通过仓库链接查看。`,
-          );
-        const text = await response.text();
-        if (!controller.signal.aborted) setResult({ text });
+    if (!repository) return;
+    // 不随卸载中止请求：请求是共享缓存的，开发模式下的重复挂载也只发一次
+    let active = true;
+    void loadReadme(repository, ref).then(
+      (text) => {
+        if (active) setResult({ text });
         return undefined;
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted)
-          setResult({ error: error instanceof Error ? error.message : "文档读取失败" });
-      });
-    return () => controller.abort();
-  }, [repository, commit]);
+      },
+      (error: unknown) => {
+        if (active) setResult({ error: error instanceof Error ? error.message : "文档读取失败" });
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [repository, ref]);
+  if (!repository) return <p>插件没有登记 GitHub 仓库地址。</p>;
   if (!result) return <p>正在读取说明文档…</p>;
-  if (result.error) return <p role="alert">{result.error}</p>;
+  if (result.error)
+    return (
+      <p role="alert">
+        {result.error}{" "}
+        <a href={`https://github.com/${repository}#readme`} target="_blank" rel="noreferrer">
+          在 GitHub 查看 ↗
+        </a>
+      </p>
+    );
   return (
     <div className="market-markdown">
       <Markdown
         remarkPlugins={[remarkGfm]}
+        // README 里的 HTML 按 GitHub 的白名单过滤：保留 align、width、details 等排版，去掉脚本、事件和样式
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
         components={markdownComponents}
         urlTransform={(url, key) => {
           try {
@@ -194,13 +283,17 @@ export function PluginDetail({
         ))}
       </div>
       <div className="market-detail-body">
-        {tab === "readme" && (
-          <Readme
-            key={`${repository}-${selected?.commit}`}
-            repository={repository}
-            commit={selected?.commit}
-          />
-        )}
+        {tab === "readme" &&
+          // 等版本信息回来再读，免得先按最新代码读一遍、拿到版本提交后再读一遍
+          (releases ? (
+            <Readme
+              key={`${repository}-${selected?.commit}`}
+              repository={repository}
+              commit={selected?.commit}
+            />
+          ) : (
+            <p>正在读取说明文档…</p>
+          ))}
         {tab === "feedback" && <FeedbackPanel pluginId={p.manifestId ?? p.id} />}
         {tab === "permissions" && (
           <>

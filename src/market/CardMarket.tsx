@@ -1,5 +1,7 @@
 import {
+  lazy,
   memo,
+  Suspense,
   useCallback,
   useDeferredValue,
   useMemo,
@@ -19,11 +21,15 @@ import type { MarketPlugin } from "./data.ts";
 import { InstallButton } from "./InstallButton.tsx";
 import { MarketMap } from "./MarketMap.tsx";
 import type { MapMode } from "./MarketMap.tsx";
-import { PluginDetail } from "./PluginDetail.tsx";
 import { useMarketSnapshot } from "./useMarketSnapshot.ts";
 
 import "../developer/developer.css";
 import "./market.css";
+
+// 详情页带 Markdown 与 HTML 解析器，体积较大；打开某个插件时才下载
+const PluginDetail = lazy(() =>
+  import("./PluginDetail.tsx").then((module) => ({ default: module.PluginDetail })),
+);
 
 const score = (p: MarketPlugin | undefined) =>
   Math.log10((p?.stats?.downloads ?? 0) + 1) * 4 +
@@ -78,10 +84,7 @@ const PluginCard = memo(function PluginCard({
       onPointerLeave={() => onHover(null)}
     >
       <div className="market-card-head">
-        <span className="market-card-tile">
-          <Monogram plugin={p} size="md" />
-          {p.featured && <span className="market-card-feat" aria-hidden="true" />}
-        </span>
+        <Monogram plugin={p} size="md" />
         <div className="market-card-title">
           <h2>
             <button type="button" title={p.name} onClick={() => onOpen(p.id)}>
@@ -89,8 +92,8 @@ const PluginCard = memo(function PluginCard({
             </button>
           </h2>
           <p>
-            {p.authorName} · <span>v{p.version ?? "—"}</span>
-            {p.featured && <span className="visually-hidden">，精选</span>}
+            {p.authorName} · <span className="market-card-version">v{p.version ?? "—"}</span>
+            {p.featured && <span className="market-card-badge">精选</span>}
           </p>
         </div>
         {onLocate === null ? (
@@ -130,7 +133,19 @@ export default function CardMarket({ catalog }: { catalog: Catalog }) {
     () => (liveData ? mergeCatalog(catalog, liveData) : catalog.plugins),
     [catalog, liveData],
   );
-  const atlas = useMemo(() => buildAtlas(catalog), [catalog]);
+  // 分区计数和地图都按当前展示的插件算：最新目录比随构建发布的目录多出的插件也要算进去
+  const ranges = useMemo(() => {
+    const counts = new Map<CategoryId, number>();
+    for (const p of plugins) counts.set(p.categoryId, (counts.get(p.categoryId) ?? 0) + 1);
+    // 没有插件的分区不出现在筛选里，也不在地图上留一座空山
+    return catalog.categories
+      .map((c) => ({ ...c, count: counts.get(c.id) ?? 0 }))
+      .filter((c) => c.count > 0);
+  }, [catalog, plugins]);
+  const atlas = useMemo(
+    () => buildAtlas({ ...catalog, categories: ranges, plugins }),
+    [catalog, ranges, plugins],
+  );
   const regionLabel = useMemo(
     () => new Map(catalog.categories.map((c) => [c.id, c.label])),
     [catalog],
@@ -139,7 +154,7 @@ export default function CardMarket({ catalog }: { catalog: Catalog }) {
   const search = useDeferredValue(q);
   const type = params.get("type") ?? "all";
   const sort = params.get("sort") ?? "recommended";
-  const category = catalog.categories.find((c) => c.id === params.get("cat"))?.id ?? null;
+  const category = ranges.find((c) => c.id === params.get("cat"))?.id ?? null;
   const mode: MapMode = params.get("mode") === "3d" ? "3d" : "2d";
   const requestedHost = params.get("host");
   const host = releases?.items.some((item) => item.version === requestedHost)
@@ -268,8 +283,7 @@ export default function CardMarket({ catalog }: { catalog: Catalog }) {
             麦麦插件
           </a>
           <p className="market-subtitle">
-            Plugin Topography — {catalog.counts.plugins} entries surveyed across{" "}
-            {catalog.categories.length} ranges
+            Plugin Topography — {plugins.length} entries surveyed across {ranges.length} ranges
           </p>
         </div>
         <div className="market-actions">
@@ -285,7 +299,9 @@ export default function CardMarket({ catalog }: { catalog: Catalog }) {
           正在加载插件目录、统计和版本信息…
         </output>
       ) : selected ? (
-        <PluginDetail key={selected.id} plugin={selected} onClose={() => update("p", "")} />
+        <Suspense fallback={<output className="market-empty">正在打开插件详情…</output>}>
+          <PluginDetail key={selected.id} plugin={selected} onClose={() => update("p", "")} />
+        </Suspense>
       ) : (
         <>
           <section className="market-toolbar" aria-label="检索与筛选">
@@ -389,9 +405,9 @@ export default function CardMarket({ catalog }: { catalog: Catalog }) {
               aria-pressed={category === null}
               onClick={() => update("cat", "")}
             >
-              全部<span>{catalog.counts.plugins}</span>
+              全部<span>{plugins.length}</span>
             </button>
-            {catalog.categories.map((c) => (
+            {ranges.map((c) => (
               <button
                 key={c.id}
                 type="button"
