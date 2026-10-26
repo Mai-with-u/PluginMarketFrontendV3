@@ -1,0 +1,7 @@
+overrides:
+  "@modelcontextprotocol/server": 2.3.0
+
+# Static browser builds do not need native Node WebGPU binaries or their install hooks.
+allowBuilds:
+  "@vgpu/adapter-node": false
+  webgpu: false
