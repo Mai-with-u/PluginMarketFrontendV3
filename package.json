@@ -1,0 +1,47 @@
+{
+  "name": "maibot-plugin-market-v3",
+  "version": "0.1.0",
+  "private": true,
+  "description": "麦麦插件商店 V3 前端展示页",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.app.json --noEmit && vite build",
+    "preview": "vite preview",
+    "sync:data": "node scripts/sync-data.ts",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "check": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm check:wgsl",
+    "check:wgsl": "vgpu check src/gpu/terrain.wgsl --require-validation > /dev/null && vgpu check src/gpu/hud.wgsl --require-validation > /dev/null && vgpu check src/gpu/holo.wgsl --require-validation > /dev/null"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource-variable/martian-mono": "^5.3.0",
+    "@fontsource-variable/noto-sans-sc": "^5.3.1",
+    "@fontsource-variable/noto-serif-sc": "5.3.1",
+    "@fontsource/instrument-serif": "5.3.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "vgpu": "0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vgpu/wgsl": "0.5.0",
+    "@vgpu/wgsl-std": "0.5.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "@webgpu/types": "^0.1.74",
+    "oxfmt": "0.72.0",
+    "oxlint": "1.87.0",
+    "oxlint-tsgolint": "7.0.2004",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

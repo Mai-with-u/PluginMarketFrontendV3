@@ -1,0 +1,376 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: calc(var(--bar-h) + 24px);
+  scrollbar-color: var(--line-3) transparent;
+  scrollbar-width: thin;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+h1,
+h2,
+h3,
+p,
+dl,
+dd,
+ol,
+ul,
+figure {
+  margin: 0;
+}
+
+ol,
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+img,
+svg,
+canvas {
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+code,
+kbd {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+}
+
+::selection {
+  background: var(--signal);
+  color: var(--signal-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 8px;
+  left: 8px;
+  padding: 10px 16px;
+  background: var(--signal);
+  color: var(--signal-ink);
+  font-weight: 600;
+  transform: translateY(-160%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+.icon,
+.glyph {
+  flex: none;
+}
+
+/* ------------------------------------------------------------------ 背景场 */
+
+.field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.field__fallback {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 1px 1px, rgb(236 231 222 / 0.06) 1px, transparent 1.4px) 0 0 / 32px
+      32px,
+    radial-gradient(120% 80% at 72% 18%, rgb(255 106 31 / 0.07), transparent 60%),
+    linear-gradient(180deg, #15130f, var(--bg) 70%);
+}
+
+.field__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100lvh;
+  opacity: 0;
+  transition: opacity 1.2s var(--ease-out);
+}
+
+.field[data-state="online"] .field__canvas {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------------ 按钮 */
+
+.btn {
+  --btn-h: 44px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: var(--btn-h);
+  padding: 0 18px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  font-stretch: 92%;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform var(--dur-press) ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn--signal {
+  background: var(--signal);
+  color: var(--signal-ink);
+}
+
+.btn--signal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: repeating-linear-gradient(-45deg, rgb(22 11 4 / 0.14) 0 2px, transparent 2px 8px);
+  transform: translateX(-101%);
+  transition: transform 420ms var(--ease-out);
+}
+
+.btn--signal[data-state="copied"] {
+  background: var(--paper);
+}
+
+.btn--ghost {
+  border-color: var(--line-3);
+  background: rgb(12 11 10 / 0.5);
+  color: var(--text);
+}
+
+.btn--lg {
+  --btn-h: 52px;
+  padding: 0 26px;
+  font-size: 15px;
+}
+
+.btn--compact {
+  --btn-h: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn--signal:hover:not(:disabled) {
+    background: var(--signal-hi);
+  }
+
+  .btn--signal:hover:not(:disabled)::after {
+    transform: none;
+  }
+
+  .btn--ghost:hover:not(:disabled) {
+    border-color: var(--signal);
+    color: var(--signal-hi);
+  }
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line-2);
+  color: var(--text-2);
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    transform var(--dur-press) ease;
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover {
+    border-color: var(--signal);
+    color: var(--signal);
+  }
+}
+
+.link-btn {
+  font-size: 13px;
+  color: var(--signal);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+/* 切角：支持 corner-shape 的浏览器边框也跟着斜切，其余保持直角 */
+@supports (corner-shape: bevel) {
+  .btn {
+    border-radius: 0 0 10px 0;
+    corner-shape: bevel;
+  }
+
+  .icon-btn {
+    border-radius: 0 0 8px 0;
+    corner-shape: bevel;
+  }
+}
+
+/* ------------------------------------------------------------------ 启动与错误 */
+
+.boot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  min-height: 100svh;
+  padding: var(--gutter);
+  text-align: center;
+  color: var(--text-2);
+}
+
+.boot .logo-mark {
+  color: var(--text);
+  animation: boot-pulse 1.4s var(--ease-snap) infinite;
+}
+
+.boot__title {
+  font-family: var(--font-cjk);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.boot__body {
+  max-width: 34em;
+  color: var(--text-2);
+}
+
+.boot__bar {
+  position: relative;
+  width: 220px;
+  height: 2px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+
+.boot__bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--signal);
+  animation: boot-bar 1.1s var(--ease-snap) infinite;
+}
+
+.boot__code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--text-3);
+}
+
+.boot--error .icon {
+  color: var(--signal);
+}
+
+@keyframes boot-bar {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@keyframes boot-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

@@ -1,0 +1,58 @@
+/*
+ * 令牌。唯一强调色是信号橙，其余一律中性。
+ * 背景 #0c0b0a 与 field.wgsl 里的 GRAPHITE 对齐，WebGPU 未就绪时画面不跳色。
+ */
+:root {
+  color-scheme: dark;
+
+  --bg: #0c0b0a;
+  --bg-1: #12110f;
+  --bg-2: #181614;
+  --bg-3: #211e1b;
+  --veil: rgb(12 11 10 / 0.78);
+
+  --line: rgb(236 231 222 / 0.1);
+  --line-2: rgb(236 231 222 / 0.18);
+  --line-3: rgb(236 231 222 / 0.34);
+
+  --text: #ece7de;
+  --text-2: #b4ada2;
+  --text-3: #8a847a;
+
+  --signal: #ff6a1f;
+  --signal-hi: #ff8b4f;
+  --signal-lo: #d9500c;
+  --signal-ink: #160b04;
+  --signal-a08: rgb(255 106 31 / 0.08);
+  --signal-a16: rgb(255 106 31 / 0.16);
+  --signal-a32: rgb(255 106 31 / 0.32);
+
+  --paper: #e9e5dc;
+  --paper-2: #dcd7cc;
+  --paper-line: rgb(20 17 14 / 0.14);
+  --paper-line-2: rgb(20 17 14 / 0.3);
+  --ink: #14110e;
+  --ink-2: #48433b;
+  --ink-3: #635d53;
+
+  --font-sans: "Archivo Variable", "Noto Sans SC Variable", "PingFang SC", sans-serif;
+  --font-cjk: "Noto Sans SC Variable", "PingFang SC", sans-serif;
+  --font-serif: "Noto Serif SC Variable", "Songti SC", serif;
+  --font-italic: "Instrument Serif", "Noto Serif SC Variable", serif;
+  --font-mono: "Martian Mono Variable", "Noto Sans SC Variable", ui-monospace, monospace;
+
+  --gutter: clamp(16px, 3.2vw, 48px);
+  --max: 1480px;
+  --bar-h: 64px;
+  --strip-h: 34px;
+  --rail-w: 232px;
+  --dossier-w: clamp(400px, 31vw, 480px);
+  --cut: 14px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap: cubic-bezier(0.7, 0, 0.2, 1);
+  --dur-press: 140ms;
+
+  --hatch: repeating-linear-gradient(-45deg, var(--line-2) 0 1px, transparent 1px 7px);
+  --hatch-signal: repeating-linear-gradient(-45deg, var(--signal) 0 6px, transparent 6px 12px);
+}
