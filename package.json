@@ -2,6 +2,7 @@
   "name": "maibot-plugin-market-v3",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@12.4.2",
   "description": "麦麦插件商店 V3 前端展示页",
   "type": "module",
   "scripts": {

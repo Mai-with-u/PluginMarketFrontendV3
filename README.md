@@ -6,7 +6,7 @@
 
 ## 本地开发
 
-需要 Node.js 24 或更高版本，以及 pnpm。
+需要 Node.js 24 或更高版本，以及 pnpm 12.4.2（版本固定在 `package.json` 的 `packageManager` 字段）。Cloudflare Workers Builds 应使用相同版本；若设置了 `PNPM_VERSION` 构建变量，请将其设为 `12.4.2`，避免旧版本覆盖仓库配置。
 
 ```bash
 pnpm install --frozen-lockfile

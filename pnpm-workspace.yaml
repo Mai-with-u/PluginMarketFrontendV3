@@ -1,3 +1,6 @@
+packages:
+  - "."
+
 overrides:
   "@modelcontextprotocol/server": 2.3.0
 
