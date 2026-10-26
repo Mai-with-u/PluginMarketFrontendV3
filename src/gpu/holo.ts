@@ -10,6 +10,7 @@
 import { effect, frame, sampler, surface, texture } from "vgpu";
 import type { Gpu, Texture } from "vgpu";
 
+import { subscribeTheme } from "../theme.ts";
 import holoShader from "./holo.wgsl";
 
 interface PaintEvent extends Event {
@@ -284,6 +285,8 @@ export function startHolo(
   }, FIRST_UPLOAD_TIMEOUT);
 
   kick();
+  // Theme tokens live on <html>, outside the observed card subtree.
+  const unsubscribeTheme = subscribeTheme(kick);
 
   return {
     markSwitch() {
@@ -292,6 +295,7 @@ export function startHolo(
     },
     dispose() {
       disposed = true;
+      unsubscribeTheme();
       stopDriver();
       clearTimeout(watchdog);
       clearInterval(idleTimer);

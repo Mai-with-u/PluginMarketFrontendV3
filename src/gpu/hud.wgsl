@@ -6,6 +6,7 @@ struct Hud {
   resolution: vec2f,
   time: f32,
   dpr: f32,
+  lightTheme: f32,
 }
 
 @group(0) @binding(0) var<uniform> o: Hud;
@@ -38,6 +39,11 @@ const SIGNAL = vec3f(1.0, 0.416, 0.122);
   let n = hash2(floor(uv * res * o.dpr) + vec2f(fract(o.time * 7.0) * 311.0, 0.0)).x - 0.5;
   rgb += vec3f(max(n, 0.0) * 0.022);
   shade += max(-n, 0.0) * 0.04;
+
+  if (o.lightTheme > 0.5) {
+    let inkAlpha = dotMask * 0.07 + max(armX, armY) * 0.09 + beamLine * 0.08 + abs(n) * 0.012;
+    return vec4f(vec3f(0.30, 0.26, 0.21) * inkAlpha, inkAlpha);
+  }
 
   return vec4f(rgb, shade);
 }

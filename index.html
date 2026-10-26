@@ -3,8 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#0c0b0a" />
+    <script>
+      (() => {
+        let preference = "system";
+        try {
+          const saved = localStorage.getItem("plugin-market-theme");
+          if (saved === "light" || saved === "dark") preference = saved;
+        } catch {
+          /* Theme selection remains available without storage. */
+        }
+        const theme =
+          preference === "system"
+            ? matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+            : preference;
+        document.documentElement.dataset.themePreference = preference;
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]').content =
+          theme === "light" ? "#f5f2eb" : "#0c0b0a";
+      })();
+    </script>
     <meta
       name="description"
       content="麦麦插件商店：MaiBot 社区插件索引。按分区检索插件，复制仓库地址到 WebUI 安装。"

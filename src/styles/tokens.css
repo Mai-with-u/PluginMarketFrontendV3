@@ -10,6 +10,9 @@
   --bg-2: #181614;
   --bg-3: #211e1b;
   --veil: rgb(12 11 10 / 0.78);
+  --surface: rgb(14 13 12 / 0.96);
+  --halo-color: rgb(12 11 10 / 0.85);
+  --error: #ffae98;
 
   --line: rgb(236 231 222 / 0.1);
   --line-2: rgb(236 231 222 / 0.18);
@@ -55,4 +58,29 @@
 
   --hatch: repeating-linear-gradient(-45deg, var(--line-2) 0 1px, transparent 1px 7px);
   --hatch-signal: repeating-linear-gradient(-45deg, var(--signal) 0 6px, transparent 6px 12px);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f2eb;
+  --bg-1: #fffcf6;
+  --bg-2: #ede9e0;
+  --bg-3: #e5dfd3;
+  --veil: rgb(245 242 235 / 0.88);
+  --surface: rgb(255 252 246 / 0.97);
+  --halo-color: rgb(245 242 235 / 0.92);
+  --line: rgb(48 40 30 / 0.12);
+  --line-2: rgb(48 40 30 / 0.22);
+  --line-3: rgb(48 40 30 / 0.4);
+  --text: #29251f;
+  --text-2: #575047;
+  --text-3: #70675b;
+  --signal: #b9430b;
+  --signal-hi: #963407;
+  --signal-lo: #d9500c;
+  --signal-ink: #fffaf3;
+  --signal-a08: rgb(185 67 11 / 0.08);
+  --signal-a16: rgb(185 67 11 / 0.16);
+  --signal-a32: rgb(185 67 11 / 0.32);
+  --error: #ad2e21;
 }

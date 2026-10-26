@@ -31,7 +31,7 @@ export function BootSequence({ catalog, pipeline }: { catalog: Catalog; pipeline
         <div className="bootseq__brand">
           <LogoMark size={40} />
           <div>
-            <p className="bootseq__title">麦麦插件商店</p>
+            <p className="bootseq__title">麦麦插件</p>
             <p className="bootseq__sub">Plugin Topography — surveying</p>
           </div>
         </div>

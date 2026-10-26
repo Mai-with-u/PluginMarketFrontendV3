@@ -138,10 +138,9 @@ kbd {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 1px 1px, rgb(236 231 222 / 0.06) 1px, transparent 1.4px) 0 0 / 32px
-      32px,
+    radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 1.4px) 0 0 / 32px 32px,
     radial-gradient(120% 80% at 72% 18%, rgb(255 106 31 / 0.07), transparent 60%),
-    linear-gradient(180deg, #15130f, var(--bg) 70%);
+    linear-gradient(180deg, var(--bg-1), var(--bg) 70%);
 }
 
 .field__canvas {
@@ -210,11 +209,12 @@ kbd {
 
 .btn--signal[data-state="copied"] {
   background: var(--paper);
+  color: var(--ink);
 }
 
 .btn--ghost {
   border-color: var(--line-3);
-  background: rgb(12 11 10 / 0.5);
+  background: var(--veil);
   color: var(--text);
 }
 
@@ -275,6 +275,23 @@ kbd {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
+}
+
+.theme-switch {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line-2);
+  background: var(--veil);
+  color: var(--text-2);
+  pointer-events: auto;
+}
+
+.theme-switch:hover {
+  border-color: var(--signal);
+  color: var(--signal);
 }
 
 /* 切角：支持 corner-shape 的浏览器边框也跟着斜切，其余保持直角 */

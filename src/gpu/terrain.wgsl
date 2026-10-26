@@ -25,6 +25,7 @@ struct Scene {
   dpr: f32,
   pulseAge: f32,
   energy: f32,
+  lightTheme: f32,
 }
 
 @group(0) @binding(0) var<uniform> u: Scene;
@@ -190,7 +191,19 @@ fn contour(x: f32) -> f32 {
   let b = u.dataBounds;
   let outside = max(max(b.x - in.world.x, in.world.x - b.z), max(b.y - in.world.y, in.world.y - b.w));
   let edge = smoothstep(0.0, EDGE_FADE, outside) * rise;
-  col = mix(col, GRAPHITE, max(fog, edge));
+  var background = GRAPHITE;
+  if (u.lightTheme > 0.5) {
+    // 白天使用纸色山体和墨色等高线；保留地形、扫描和选中反馈。
+    background = vec3f(245.0, 242.0, 235.0) / 255.0;
+    let ink = vec3f(0.30, 0.26, 0.21);
+    let ochre = vec3f(0.725, 0.263, 0.043);
+    col = background - vec3f(0.08, 0.09, 0.10) * clamp(band, 0.0, 1.6) * rise;
+    col *= 1.0 - (1.0 - lambert) * 0.08 * rise;
+    col = mix(col, mix(ink, ochre, heat), lineAmt * 1.3);
+    let ringInk = exp(-(r1 * r1) / 3.0) * (1.0 - pulse) * u.focus.z * 0.6;
+    col = mix(col, ochre, ringInk);
+  }
+  col = mix(col, background, max(fog, edge));
 
   return vec4f(col, 1.0);
 }

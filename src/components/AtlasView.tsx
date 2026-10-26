@@ -33,6 +33,7 @@ import { BOOT_DONE_MS, BOOT_REVEAL_MS, BootSequence } from "./BootSequence.tsx";
 import { DetailCard } from "./DetailCard.tsx";
 import { CategoryGlyph, Icon } from "./Icon.tsx";
 import { MapView } from "./MapView.tsx";
+import { ThemeSwitch } from "./ThemeSwitch.tsx";
 
 const PANEL_W = 420;
 const LEGEND_W = 260;
@@ -310,7 +311,7 @@ export function AtlasView({ catalog }: { catalog: Catalog }) {
       <LeaderLine pin={selected} />
 
       <header className="masthead">
-        <h1 className="masthead__title">麦麦插件商店</h1>
+        <h1 className="masthead__title">麦麦插件</h1>
         <p className="masthead__sub">
           Plugin Topography — {catalog.counts.plugins} entries surveyed across{" "}
           {atlas.regions.length} ranges
@@ -369,9 +370,6 @@ export function AtlasView({ catalog }: { catalog: Catalog }) {
       </search>
 
       <nav className="legend" aria-label="分区图例">
-        <p className="legend__title">
-          图例 <i>Legend</i>
-        </p>
         <ul className="legend__ranges">
           {atlas.regions.map((r) => (
             <li key={r.id}>
@@ -407,16 +405,18 @@ export function AtlasView({ catalog }: { catalog: Catalog }) {
         <p className="legend__keys">拖拽平移 · 滚轮缩放 · ← → 巡览 · V 立体 · Esc 全图</p>
       </nav>
 
-      <fieldset className="modeswitch">
-        <legend className="visually-hidden">视图</legend>
-        {(["2d", "3d"] as const).map((m) => (
-          <label key={m} className="modeswitch__opt">
-            <input type="radio" name="mode" checked={mode === m} onChange={() => setMode(m)} />
-            <span>{m === "2d" ? "平面" : "立体"}</span>
-            <small>{m === "2d" ? "2D" : "2.5D"}</small>
-          </label>
-        ))}
-      </fieldset>
+      <div className="view-controls">
+        <ThemeSwitch />
+        <fieldset className="modeswitch">
+          <legend className="visually-hidden">视图</legend>
+          {(["2d", "3d"] as const).map((m) => (
+            <label key={m} className="modeswitch__opt">
+              <input type="radio" name="mode" checked={mode === m} onChange={() => setMode(m)} />
+              <span>{m === "2d" ? "平面" : "立体"}</span>
+            </label>
+          ))}
+        </fieldset>
+      </div>
 
       <p className="status" aria-hidden="true">
         <span data-state={webgpu}>WebGPU</span>

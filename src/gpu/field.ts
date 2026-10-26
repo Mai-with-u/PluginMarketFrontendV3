@@ -11,6 +11,7 @@ import {
   screenToGround,
 } from "../map/camera.ts";
 import type { View } from "../map/camera.ts";
+import { getResolvedTheme } from "../theme.ts";
 import hudShader from "./hud.wgsl";
 import terrainShader from "./terrain.wgsl";
 
@@ -33,6 +34,7 @@ const GRID = 220;
 /** 背景每帧最多着色的像素数；大屏上自动降低像素密度 */
 const PIXEL_BUDGET = 2.6e6;
 const CLEAR: [number, number, number, number] = [0.047, 0.043, 0.039, 1];
+const LIGHT_CLEAR: [number, number, number, number] = [245 / 255, 242 / 255, 235 / 255, 1];
 
 type Vec4 = [number, number, number, number];
 
@@ -115,6 +117,7 @@ function sceneValues(time: number) {
     zoom: v.zoom,
     relief,
     time,
+    lightTheme: getResolvedTheme() === "light" ? 1 : 0,
   };
 }
 
@@ -150,7 +153,14 @@ export function startField(gpu: Gpu, canvas: HTMLCanvasElement, opts: FieldOptio
   const hud = effect(gpu, hudShader, {
     label: "hud",
     blend: "premultiplied",
-    set: { o: { resolution: css(), time: 0, dpr: target.dpr } },
+    set: {
+      o: {
+        resolution: css(),
+        time: 0,
+        dpr: target.dpr,
+        lightTheme: getResolvedTheme() === "light" ? 1 : 0,
+      },
+    },
   });
 
   const unsubscribeResize = target.onResize((e) => {
@@ -230,8 +240,9 @@ export function startField(gpu: Gpu, canvas: HTMLCanvasElement, opts: FieldOptio
           energy,
         },
       });
-      hud.set({ o: { time: t } });
-      frame.pass({ target, clear: CLEAR }, (pass) => {
+      const lightTheme = getResolvedTheme() === "light";
+      hud.set({ o: { time: t, lightTheme: lightTheme ? 1 : 0 } });
+      frame.pass({ target, clear: lightTheme ? LIGHT_CLEAR : CLEAR }, (pass) => {
         pass.draw(terrain);
         pass.draw(hud);
       });
