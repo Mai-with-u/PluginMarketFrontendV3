@@ -5,7 +5,7 @@ import { getGpu } from "./device.ts";
 import { startField } from "./field.ts";
 import { usePipeline } from "./usePipeline.ts";
 
-/** 全屏 WebGPU 背景。WebGPU 不可用时只留 CSS 点阵底。 */
+/** 铺满所在地图面板的 WebGPU 地形。WebGPU 不可用时只留 CSS 点阵底。 */
 export function FieldBackdrop() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = useReducedMotion();

@@ -34,7 +34,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
-interface Resource<T> {
+export interface Resource<T> {
   path: string;
   revision: number;
   data?: T;
@@ -92,6 +92,9 @@ export interface Plugin {
   likes: number;
   dislikes: number;
   comments: number;
+  downloads: number;
+  downloads_7d: number;
+  downloads_30d: number;
   claim: "active" | "pending" | "revoked" | "rejected" | null;
 }
 export interface Review {

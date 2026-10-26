@@ -1,16 +1,15 @@
 import { Component, lazy, Suspense, use } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 
-import { AtlasView } from "./components/AtlasView.tsx";
 import { Icon, LogoMark } from "./components/Icon.tsx";
 import { loadCatalog, retryCatalog } from "./data/catalog.ts";
-import { FieldBackdrop } from "./gpu/FieldBackdrop.tsx";
 
 const DeveloperPage = lazy(() => import("./developer/DeveloperPage.tsx"));
+const CardMarket = lazy(() => import("./market/CardMarket.tsx"));
 
 function Depot() {
   const catalog = use(loadCatalog());
-  return <AtlasView catalog={catalog} />;
+  return <CardMarket catalog={catalog} />;
 }
 
 function Boot() {
@@ -71,7 +70,6 @@ export function App() {
   }
   return (
     <>
-      <FieldBackdrop />
       <CatalogBoundary>
         <Suspense fallback={<Boot />}>
           <Depot />

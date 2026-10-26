@@ -53,7 +53,7 @@ export function markHtmlInCanvasFailed(): void {
 
 let gpuPromise: Promise<Gpu | null> | null = null;
 
-/** 全页共用一个 device：背景场和精选档案各自挂一个 surface。 */
+/** 全页共用一个 device，打开地图时才初始化；关掉地图的访客不会启动 WebGPU。 */
 export function getGpu(): Promise<Gpu | null> {
   gpuPromise ??= (async () => {
     if (!("gpu" in navigator)) {

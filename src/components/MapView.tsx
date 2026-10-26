@@ -67,16 +67,20 @@ export function MapView({
   atlas,
   matchIds,
   selectedId,
+  hoverId = null,
   activeRegion,
   onSelect,
+  onHover,
   onRegion,
   onHoverRegion,
 }: {
   atlas: Atlas;
   matchIds: ReadonlySet<string> | null;
   selectedId: string | null;
+  hoverId?: string | null;
   activeRegion: CategoryId | null;
   onSelect: (id: string) => void;
+  onHover?: (id: string | null) => void;
   onRegion: (region: Region) => void;
   onHoverRegion: (id: CategoryId | null) => void;
 }) {
@@ -166,7 +170,8 @@ export function MapView({
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
       const speed = e.ctrlKey ? 0.012 : 0.0017;
-      zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * speed));
+      const box = root.getBoundingClientRect();
+      zoomAt(e.clientX - box.left, e.clientY - box.top, Math.exp(-e.deltaY * speed));
     };
     root.addEventListener("wheel", onWheel, { passive: false });
     return () => root.removeEventListener("wheel", onWheel);
@@ -181,7 +186,9 @@ export function MapView({
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>): void => {
     const coord = coordRef.current;
     if (coord !== null) {
-      const ground = screenToGround(e.clientX, e.clientY);
+      // 相机的屏幕坐标以地图容器左上角为原点，地图不一定铺满整个窗口
+      const box = e.currentTarget.getBoundingClientRect();
+      const ground = screenToGround(e.clientX - box.left, e.clientY - box.top);
       coord.textContent =
         ground === null
           ? "N ----  E ----"
@@ -253,11 +260,14 @@ export function MapView({
               data-featured={p.featured}
               data-synced={p.hasDetails}
               data-selected={selected}
+              data-hot={p.id === hoverId}
               data-dim={matchIds !== null && !matchIds.has(p.id)}
               style={{ "--d": pin.rank }}
               tabIndex={selected ? 0 : -1}
               aria-label={`${p.name}，${pin.region.label}`}
               onClick={() => onSelect(p.id)}
+              onPointerEnter={() => onHover?.(p.id)}
+              onPointerLeave={() => onHover?.(null)}
             >
               <span className="pin__stem" />
               <span className="pin__dot" />

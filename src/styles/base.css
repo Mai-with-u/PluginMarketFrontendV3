@@ -128,7 +128,7 @@ kbd {
 /* ------------------------------------------------------------------ 背景场 */
 
 .field {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
@@ -147,7 +147,7 @@ kbd {
   position: absolute;
   inset: 0;
   width: 100%;
-  height: 100lvh;
+  height: 100%;
   opacity: 0;
   transition: opacity 1.2s var(--ease-out);
 }

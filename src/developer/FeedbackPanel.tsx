@@ -1,10 +1,23 @@
-import { Component, useState } from "react";
+import { Component, useEffect, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 
+import { Icon } from "../components/Icon.tsx";
 import { mutate, useResource } from "./api.ts";
 import type { Feedback, Review, Session } from "./api.ts";
+import { shortDate } from "./format.ts";
 
 import "./developer.css";
+
+function Rating({ value }: { value: number }) {
+  return (
+    <span className="feedback-rating" title={`${value}/5`}>
+      {[1, 2, 3, 4, 5].map((step) => (
+        <span key={step} aria-hidden="true" data-on={step <= Math.round(value)} />
+      ))}
+      <span className="visually-hidden">评分 {value}/5</span>
+    </span>
+  );
+}
 
 function ReviewItem({
   review,
@@ -39,77 +52,110 @@ function ReviewItem({
       setBusy(false);
     }
   };
+  const name = review.username ?? "匿名用户";
+  const pending = session !== undefined && review.reply === null;
+  const own = review.reply?.login.toLowerCase() === session?.login.toLowerCase();
   return (
     <article className="feedback-review" id={`review-${review.id}`}>
-      <p className="developer-muted">
-        {review.username ?? "匿名用户"} · {review.updated_at.slice(0, 10)}
-        {review.rating !== null && ` · ${review.rating}/5`}
-      </p>
-      <p className="feedback-content">{review.comment}</p>
-      {review.reply && (
-        <blockquote>
-          <strong>开发者回复 · @{review.reply.login}</strong>
-          <p className="feedback-content">{review.reply.body}</p>
-        </blockquote>
-      )}
-      {session && !editing && (
-        <button className="developer-link" type="button" onClick={() => setEditing(true)}>
-          {review.reply ? "编辑回复" : "回复评论"}
-        </button>
-      )}
-      {session && editing && (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void save(false);
-          }}
-        >
-          <label>
-            开发者回复
+      <span className="feedback-avatar" aria-hidden="true">
+        {Array.from(name)[0]?.toUpperCase()}
+        {pending && <span className="feedback-pending" />}
+      </span>
+      <div className="feedback-body">
+        <div className="feedback-meta">
+          <strong>{name}</strong>
+          {review.rating !== null && <Rating value={review.rating} />}
+          {pending && <span className="visually-hidden">，待回复</span>}
+          <time dateTime={review.updated_at}>{shortDate(review.updated_at)}</time>
+        </div>
+        <p className="feedback-content">{review.comment}</p>
+        {review.reply && !editing && (
+          <div className="feedback-reply">
+            <div className="feedback-reply-meta">
+              <span>
+                {own ? "你的回复" : `开发者回复 · @${review.reply.login}`} ·{" "}
+                {shortDate(review.reply.updated)}
+              </span>
+              {session && (
+                <button
+                  type="button"
+                  className="developer-ghost"
+                  aria-label="编辑回复"
+                  onClick={() => setEditing(true)}
+                >
+                  <Icon name="edit" size={14} />
+                </button>
+              )}
+            </div>
+            <p className="feedback-content">{review.reply.body}</p>
+          </div>
+        )}
+        {session && !review.reply && !editing && (
+          <button className="developer-text-button" type="button" onClick={() => setEditing(true)}>
+            <Icon name="reply" size={14} />
+            回复
+          </button>
+        )}
+        {session && editing && (
+          <form
+            className="feedback-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void save(false);
+            }}
+          >
+            <label className="visually-hidden" htmlFor={`reply-${review.id}`}>
+              回复 {name}
+            </label>
             <textarea
+              id={`reply-${review.id}`}
               value={draft}
               maxLength={2000}
               required
               disabled={busy}
+              placeholder={`回复 ${name}，会公开显示在这条评论下方`}
               onChange={(event) => setDraft(event.target.value)}
             />
-          </label>
-          <div className="developer-actions">
-            <button
-              className="developer-button"
-              type="submit"
-              disabled={busy || draft.trim() === ""}
-            >
-              {busy ? "正在保存…" : "发布回复"}
-            </button>
-            {review.reply && (
+            <div className="feedback-form-actions">
+              {review.reply && (
+                <button
+                  className="developer-text-button is-danger"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    void save(true);
+                  }}
+                >
+                  删除回复
+                </button>
+              )}
               <button
-                className="developer-link"
+                className="developer-button is-quiet"
                 type="button"
                 disabled={busy}
                 onClick={() => {
-                  void save(true);
+                  setEditing(false);
+                  setDraft(review.reply?.body ?? "");
                 }}
               >
-                删除回复
+                取消
               </button>
+              <button
+                className="developer-button"
+                type="submit"
+                disabled={busy || draft.trim() === ""}
+              >
+                {busy ? "正在保存…" : "发布回复"}
+              </button>
+            </div>
+            {error && (
+              <p className="developer-error" role="alert">
+                {error}
+              </p>
             )}
-            <button
-              className="developer-link"
-              type="button"
-              disabled={busy}
-              onClick={() => setEditing(false)}
-            >
-              取消
-            </button>
-          </div>
-          {error && (
-            <p className="developer-error" role="alert">
-              {error}
-            </p>
-          )}
-        </form>
-      )}
+          </form>
+        )}
+      </div>
     </article>
   );
 }
@@ -139,75 +185,114 @@ class FeedbackBoundary extends Component<{ children: ReactNode }, { failed: bool
   }
 }
 
-export function FeedbackPanel({ pluginId, session }: { pluginId: string; session?: Session }) {
+interface FeedbackProps {
+  pluginId: string;
+  session?: Session;
+  /** Inside the developer center, where the surrounding tab already names and explains it. */
+  embedded?: boolean;
+  revision?: number;
+  onPending?: (count: number) => void;
+}
+
+export function FeedbackPanel(props: FeedbackProps) {
   return (
-    <FeedbackBoundary key={pluginId}>
-      <FeedbackContent pluginId={pluginId} session={session} />
+    <FeedbackBoundary key={props.pluginId}>
+      <FeedbackContent {...props} />
     </FeedbackBoundary>
   );
 }
 
-function FeedbackContent({ pluginId, session }: { pluginId: string; session?: Session }) {
+function FeedbackContent({
+  pluginId,
+  session,
+  embedded = false,
+  revision = 0,
+  onPending,
+}: FeedbackProps) {
   const [offset, setOffset] = useState(0);
-  const [revision, setRevision] = useState(0);
+  const [localRevision, setLocalRevision] = useState(0);
   const result = useResource<Feedback>(
     `/api/feedback/${encodeURIComponent(pluginId)}?offset=${offset}`,
-    revision,
+    // Both counters only grow, so their sum changes whenever either one does.
+    revision + localRevision,
   );
+  const items = result?.data?.items ?? [];
+  const pending = session ? items.filter((review) => review.reply === null).length : 0;
+  const loaded = result?.data !== undefined;
+  useEffect(() => {
+    if (loaded) onPending?.(pending);
+  }, [loaded, pending, onPending]);
+  // Developers see unanswered reviews first; everyone else reads them in order.
+  const ordered = session
+    ? items.toSorted((a, b) => Number(a.reply !== null) - Number(b.reply !== null))
+    : items;
   return (
-    <section className="feedback-panel" aria-label="评论与开发者回复">
-      <div className="developer-actions">
-        <h3>评论与回复</h3>
-        <button
-          type="button"
-          className="developer-link"
-          onClick={() => setRevision((value) => value + 1)}
-        >
-          刷新
-        </button>
-      </div>
-      {result?.error && <output className="developer-muted">{result.error.message}</output>}
-      {!result && <output className="developer-muted">正在读取评论…</output>}
-      {result?.data && (
+    <section
+      className={embedded ? "feedback-panel is-embedded" : "feedback-panel"}
+      aria-label="评论与开发者回复"
+    >
+      {!embedded && (
         <>
-          <p className="developer-muted">
-            {result.data.likes} 赞 · {result.data.dislikes} 踩 · {result.data.total} 条评论
-          </p>
+          <div className="feedback-head">
+            <h3>评论与回复</h3>
+            {result?.data && (
+              <span className="feedback-summary">
+                {result.data.likes} 赞 · {result.data.dislikes} 踩 · {result.data.total} 条评论
+              </span>
+            )}
+            <button
+              type="button"
+              className="developer-text-button"
+              onClick={() => setLocalRevision((value) => value + 1)}
+            >
+              刷新
+            </button>
+          </div>
           <p className="developer-caption">
             来自现有市场的用户反馈，署名不代表 GitHub 身份。约每分钟同步。
           </p>
-          {result.data.items.length === 0 && <p className="developer-muted">暂无评论。</p>}
-          {result.data.items.map((review) => (
-            <ReviewItem
-              key={`${review.id}:${review.revision}:${review.reply?.updated ?? 0}`}
-              review={review}
-              pluginId={pluginId}
-              session={session}
-              refresh={() => setRevision((value) => value + 1)}
-            />
-          ))}
-          <div className="developer-actions">
-            <button
-              type="button"
-              className="developer-link"
-              disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - 20))}
-            >
-              上一页
-            </button>
-            <span className="developer-muted">第 {Math.floor(offset / 20) + 1} 页</span>
-            <button
-              type="button"
-              className="developer-link"
-              disabled={result.data.next_offset === null}
-              onClick={() => {
-                if (result.data?.next_offset !== null && result.data?.next_offset !== undefined)
-                  setOffset(result.data.next_offset);
-              }}
-            >
-              下一页
-            </button>
+        </>
+      )}
+      {result?.error && <p className="developer-error">{result.error.message}</p>}
+      {!result && <p className="developer-empty">正在读取评论…</p>}
+      {result?.data && (
+        <>
+          {items.length === 0 && <p className="developer-empty">还没有评论</p>}
+          <div className="feedback-list">
+            {ordered.map((review) => (
+              <ReviewItem
+                key={`${review.id}:${review.revision}:${review.reply?.updated ?? 0}`}
+                review={review}
+                pluginId={pluginId}
+                session={session}
+                refresh={() => setLocalRevision((value) => value + 1)}
+              />
+            ))}
           </div>
+          {(offset > 0 || result.data.next_offset !== null) && (
+            <div className="feedback-pages">
+              <button
+                type="button"
+                className="developer-text-button"
+                disabled={offset === 0}
+                onClick={() => setOffset(Math.max(0, offset - 20))}
+              >
+                上一页
+              </button>
+              <span>第 {Math.floor(offset / 20) + 1} 页</span>
+              <button
+                type="button"
+                className="developer-text-button"
+                disabled={result.data.next_offset === null}
+                onClick={() => {
+                  if (result.data?.next_offset !== null && result.data?.next_offset !== undefined)
+                    setOffset(result.data.next_offset);
+                }}
+              >
+                下一页
+              </button>
+            </div>
+          )}
         </>
       )}
     </section>

@@ -141,7 +141,7 @@ export function startField(gpu: Gpu, canvas: HTMLCanvasElement, opts: FieldOptio
         regions,
         focus,
         resolution: css(),
-        pointer: [innerWidth * 0.5, innerHeight * 0.5],
+        pointer: [canvas.clientWidth * 0.5, canvas.clientHeight * 0.5],
         pointerWorld: [camera.current.x, camera.current.y],
         pulseOrigin: [0, 0],
         dpr: target.dpr,
@@ -163,13 +163,19 @@ export function startField(gpu: Gpu, canvas: HTMLCanvasElement, opts: FieldOptio
     },
   });
 
+  // 场画在地图面板里，不一定铺满窗口；指针和波纹都换算成相对画布左上角的坐标
+  let box = canvas.getBoundingClientRect();
+  const remeasure = (): void => {
+    box = canvas.getBoundingClientRect();
+  };
   const unsubscribeResize = target.onResize((e) => {
+    remeasure();
     terrain.set({ u: { resolution: css(), dpr: e.dpr } });
     hud.set({ o: { resolution: css(), dpr: e.dpr } });
   });
 
   const time = clock(gpu);
-  const pointer = { x: innerWidth * 0.5, y: innerHeight * 0.5 };
+  const pointer = { x: box.width * 0.5, y: box.height * 0.5 };
   const smooth = { ...pointer };
   let energy = 0;
   let lastMove = performance.now();
@@ -178,19 +184,24 @@ export function startField(gpu: Gpu, canvas: HTMLCanvasElement, opts: FieldOptio
   const onMove = (e: PointerEvent): void => {
     const now = performance.now();
     const dt = Math.max(1, now - lastMove);
-    const speed = Math.hypot(e.clientX - pointer.x, e.clientY - pointer.y) / dt;
+    const x = e.clientX - box.left;
+    const y = e.clientY - box.top;
+    const speed = Math.hypot(x - pointer.x, y - pointer.y) / dt;
     energy = Math.min(1, energy + speed * 0.06);
-    pointer.x = e.clientX;
-    pointer.y = e.clientY;
+    pointer.x = x;
+    pointer.y = y;
     lastMove = now;
   };
   const onClick = (e: MouseEvent): void => {
     if (e.target instanceof Element && e.target.closest(PULSE_SELECTOR) !== null) {
-      pulse = { x: e.clientX, y: e.clientY, start: time.time };
+      pulse = { x: e.clientX - box.left, y: e.clientY - box.top, start: time.time };
     }
   };
   addEventListener("pointermove", onMove, { passive: true });
   addEventListener("click", onClick, { capture: true });
+  // 列表区域滚动或布局变化会挪动画布，但不一定改变它的尺寸
+  addEventListener("resize", remeasure);
+  addEventListener("scroll", remeasure, { capture: true, passive: true });
 
   const loop = frameLoop(
     gpu,
@@ -255,6 +266,8 @@ export function startField(gpu: Gpu, canvas: HTMLCanvasElement, opts: FieldOptio
     unsubscribeResize();
     removeEventListener("pointermove", onMove);
     removeEventListener("click", onClick, { capture: true });
+    removeEventListener("resize", remeasure);
+    removeEventListener("scroll", remeasure, { capture: true });
     target.dispose();
   };
 }

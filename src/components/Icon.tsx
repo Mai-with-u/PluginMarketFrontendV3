@@ -1,6 +1,8 @@
 import type { CategoryId } from "../data/types.ts";
 
 const PATHS = {
+  plane: "M4 4h16v16H4zM4 12h16M12 4v16",
+  cube: "M12 2 21 7v10l-9 5-9-5V7l9-5ZM3 7l9 5 9-5M12 12v10",
   search: "M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM15.2 15.2 20 20M10.5 8v5M8 10.5h5",
   copy: "M8 8h11v12H8zM5 16V4h11",
   check: "M4 12.5 9.5 18 20 6",
@@ -11,6 +13,15 @@ const PATHS = {
   prev: "M15 5l-7 7 7 7",
   next: "M9 5l7 7-7 7",
   warn: "M12 3 22 20H2zM12 10v4M12 16.5v1",
+  bell: "M6 17v-6a6 6 0 0 1 12 0v6l1.5 2h-15ZM10 21.5h4",
+  info: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 11v6M12 7.5v.5",
+  reply: "M9 6 4 11l5 5M4 11h9a7 7 0 0 1 7 7v1",
+  edit: "M15 4l5 5-11 11H4v-5Z",
+  plus: "M12 5v14M5 12h14",
+  chevronDown: "M6 9l6 6 6-6",
+  map: "M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20ZM9 4v13.5M15 6.5V20",
+  expand: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+  collapse: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
 } as const;
 
 export type IconName = keyof typeof PATHS;

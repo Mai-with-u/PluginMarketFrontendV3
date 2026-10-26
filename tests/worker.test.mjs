@@ -10,6 +10,40 @@ const env = {
 };
 const origin = "https://plugin.maibot.chat";
 
+test("public market projection permits only fixed read endpoints", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => Response.json({ items: [] }));
+  for (const path of [
+    "/api/market/catalog",
+    "/api/market/host-releases",
+    "/api/market/plugins/test.plugin/releases",
+  ]) {
+    assert.equal((await worker.fetch(new Request(origin + path), env)).status, 200);
+    assert.equal(
+      (await worker.fetch(new Request(origin + path, { method: "POST" }), env)).status,
+      404,
+    );
+  }
+  assert.equal(
+    (await worker.fetch(new Request(origin + "/api/market/plugins/test%2Fplugin/releases"), env))
+      .status,
+    404,
+  );
+});
+
+test("release history proxies GET only and preserves backend authentication", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url) => {
+    assert.equal(url.pathname, "/api/developer/plugins/test.plugin/releases");
+    return Response.json({ detail: "login required" }, { status: 401 });
+  });
+  const path = origin + "/api/developer/plugins/test.plugin/releases";
+  assert.equal((await worker.fetch(new Request(path), env)).status, 401);
+  assert.equal((await worker.fetch(new Request(path, { method: "POST" }), env)).status, 404);
+  assert.equal(
+    (await worker.fetch(new Request(path.replace("test.plugin", "test%2Fplugin")), env)).status,
+    404,
+  );
+});
+
 test("static catalog is independent of the API configuration", async () => {
   const result = await worker.fetch(new Request(origin + "/data/catalog.json"), {
     ASSETS: env.ASSETS,
