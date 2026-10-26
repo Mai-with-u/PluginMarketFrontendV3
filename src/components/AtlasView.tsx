@@ -312,6 +312,9 @@ export function AtlasView({ catalog }: { catalog: Catalog }) {
 
       <header className="masthead">
         <h1 className="masthead__title">麦麦插件</h1>
+        <a className="developer-entry" href="/developer">
+          开发者中心 ↗
+        </a>
         <p className="masthead__sub">
           Plugin Topography — {catalog.counts.plugins} entries surveyed across{" "}
           {atlas.regions.length} ranges

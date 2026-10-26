@@ -1,5 +1,6 @@
 import { hostRange, sdkRange, sectorCode } from "../data/catalog.ts";
 import type { Catalog } from "../data/types.ts";
+import { FeedbackPanel } from "../developer/FeedbackPanel.tsx";
 import type { Pin } from "../map/layout.ts";
 import { Icon } from "./Icon.tsx";
 import { CopyRepoButton, Monogram } from "./parts.tsx";
@@ -115,6 +116,7 @@ export function DetailCard({
             <p>未声明。旧版 manifest 没有这一项。</p>
           )}
         </section>
+        <FeedbackPanel key={p.id} pluginId={p.id} />
       </div>
 
       <footer className="card__foot">

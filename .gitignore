@@ -1,5 +1,8 @@
 # Dependencies and package manager caches
 node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
 .pnpm-store/
 
 # Build output and tool caches

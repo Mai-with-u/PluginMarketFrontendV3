@@ -1,0 +1,219 @@
+.developer-page {
+  max-width: 1320px;
+  padding: 48px 24px 80px;
+  margin: auto;
+  min-height: 100svh;
+}
+.developer-header {
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--line-2);
+  margin-bottom: 24px;
+}
+.developer-header .theme-switch {
+  float: right;
+}
+.developer-header h1 {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 600;
+  margin: 12px 0;
+}
+.developer-eyebrow {
+  color: var(--signal);
+  font: 11px var(--font-mono);
+  letter-spacing: 0.15em;
+  margin-top: 32px;
+}
+.developer-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(0, 1.6fr);
+  gap: 24px;
+  margin-top: 24px;
+}
+.developer-box {
+  padding: 24px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-1);
+  margin-bottom: 24px;
+  min-width: 0;
+}
+.developer-box h2 {
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.developer-muted,
+.developer-caption {
+  color: var(--text-2);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.developer-caption {
+  font-size: 11px;
+  margin: 8px 0;
+}
+.developer-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.developer-button {
+  display: inline-flex;
+  padding: 9px 16px;
+  border: 1px solid var(--signal);
+  background: var(--signal);
+  color: var(--signal-ink);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 8px 0;
+}
+.developer-link {
+  color: var(--signal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 13px;
+}
+.developer-page button:disabled,
+.feedback-panel button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.developer-search {
+  display: block;
+  font-size: 13px;
+  margin-top: 20px;
+}
+.developer-search input,
+.feedback-review textarea {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line-3);
+  background: var(--bg);
+  color: var(--text);
+  padding: 10px;
+  margin: 6px 0 12px;
+  font: inherit;
+  border-radius: 0;
+}
+.feedback-review textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+.developer-check {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 18px;
+  align-items: center;
+}
+.developer-check input {
+  accent-color: var(--signal);
+}
+.developer-organization {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.developer-organization summary {
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.developer-plugins {
+  max-height: 720px;
+  overflow-y: auto;
+}
+.developer-plugins li,
+.developer-notifications li {
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.developer-plugin-name {
+  display: block;
+  text-align: left;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.developer-plugin-name[aria-pressed="true"] {
+  color: var(--signal);
+}
+.developer-tag {
+  font-size: 11px;
+  color: var(--text-2);
+  border: 1px solid var(--line-3);
+  padding: 2px 7px;
+  font-weight: 400;
+}
+.developer-notice {
+  padding: 12px;
+  border: 1px solid var(--signal);
+  margin-top: 16px;
+}
+.developer-error {
+  color: var(--error);
+  padding: 8px 0;
+}
+.developer-login {
+  max-width: 640px;
+}
+.developer-login p {
+  margin: 12px 0;
+}
+.feedback-panel {
+  margin-top: 20px;
+}
+.feedback-panel h3 {
+  font-size: 15px;
+}
+.feedback-review {
+  border-top: 1px solid var(--line-2);
+  padding: 18px 0;
+  font-size: 13px;
+}
+.feedback-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 8px 0;
+}
+.feedback-review blockquote {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border-left: 2px solid var(--signal);
+  background: var(--signal-a08);
+}
+.feedback-review label {
+  display: block;
+  margin-top: 14px;
+}
+.developer-entry {
+  position: absolute;
+  top: 0;
+  left: 220px;
+  white-space: nowrap;
+  pointer-events: auto;
+  padding: 5px 10px;
+  color: var(--text);
+  background: var(--bg-1);
+  border: 1px solid var(--line-3);
+  font-size: 12px;
+}
+@media (max-width: 760px) {
+  .developer-grid {
+    grid-template-columns: 1fr;
+  }
+  .developer-page {
+    padding: 24px 16px;
+  }
+  .developer-box {
+    padding: 18px;
+  }
+  .developer-plugins {
+    max-height: 400px;
+  }
+  .developer-entry {
+    position: static;
+    display: inline-block;
+    margin-top: 7px;
+    padding: 0;
+    border: 0;
+  }
+}

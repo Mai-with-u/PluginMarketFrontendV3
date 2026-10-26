@@ -1,10 +1,12 @@
-import { Component, Suspense, use } from "react";
+import { Component, lazy, Suspense, use } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 
 import { AtlasView } from "./components/AtlasView.tsx";
 import { Icon, LogoMark } from "./components/Icon.tsx";
 import { loadCatalog, retryCatalog } from "./data/catalog.ts";
 import { FieldBackdrop } from "./gpu/FieldBackdrop.tsx";
+
+const DeveloperPage = lazy(() => import("./developer/DeveloperPage.tsx"));
 
 function Depot() {
   const catalog = use(loadCatalog());
@@ -60,6 +62,13 @@ class CatalogBoundary extends Component<{ children: ReactNode }, { error: Error 
 }
 
 export function App() {
+  if (window.location.pathname === "/developer" || window.location.pathname === "/developer/") {
+    return (
+      <Suspense fallback={<Boot />}>
+        <DeveloperPage />
+      </Suspense>
+    );
+  }
   return (
     <>
       <FieldBackdrop />
