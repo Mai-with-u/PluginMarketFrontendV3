@@ -1,3 +1,5 @@
+import { exchangeGitHubToken } from "./oauth-token.mjs";
+
 const ORIGIN = "https://plugin.maibot.chat";
 const ROUTES = [
   ["GET", /^\/api\/market\/(catalog|host-releases|plugins\/[^/]+\/releases)$/],
@@ -22,6 +24,7 @@ export default {
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
     // Preview deployments must never share production login cookies or database writes.
     if (url.origin !== ORIGIN) return failure(403, "开发者服务仅在正式域名启用");
+    if (url.pathname === "/api/internal/github/token") return exchangeGitHubToken(request, env);
     let path;
     try {
       path = decodeURIComponent(url.pathname);

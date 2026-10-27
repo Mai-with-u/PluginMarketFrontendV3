@@ -73,7 +73,9 @@ MAIBOT_MARKET_DATA=/path/to/maibot-plugin-market/data pnpm sync:data
 
 - 普通变量 `DEVELOPER_ORIGIN`：`https://developer-api.maibot.chat`。
 - Worker Secret `DEVELOPER_INGRESS_KEY`：与独立后端的 `INGRESS_KEY` 一致。
-- GitHub Client Secret、Fernet 密钥仅存在后端，不设置任何前端 `VITE_` Secret。
+- GitHub 登录令牌交换由 `oauth-token.mjs` 在 Worker 内调用 GitHub 官方固定接口。配置 Worker Secrets：`GITHUB_OAUTH_CLIENT_ID`、`GITHUB_OAUTH_CLIENT_SECRET`、`GITHUB_OAUTH_RELAY_KEY`；最后一个与后端同名变量一致，使用独立随机密钥，不复用 `DEVELOPER_INGRESS_KEY`。
+- `/api/internal/github/token` 仅接受后端签名的 POST 请求（HMAC-SHA256、正文绑定、60 秒时间窗、2 KiB 上限），不接受任意目标地址或应用配置，不跟随 GitHub 重定向，不缓存或记录令牌。原有 state、PKCE、授权码单次使用、身份核验和加密会话存储保留在后端。
+- GitHub Client Secret 仅保存在后端配置及 Worker Secrets；Fernet 密钥仅存在后端，不设置任何前端 `VITE_` Secret。浏览器授权仍在 GitHub 官方页面完成。
 - OAuth 回调固定为 `https://plugin.maibot.chat/api/auth/github/callback`。预览域名默认不开放开发者 API。
 - Worker invocation 日志默认关闭，防止记录 OAuth 查询参数；启用日志时先做好脱敏。
 
