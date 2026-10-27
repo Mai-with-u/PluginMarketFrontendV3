@@ -136,6 +136,11 @@
   max-height: 360px;
   overflow-y: auto;
 }
+.developer-inbox > .developer-empty,
+.developer-inbox > .developer-error {
+  padding-inline: 16px;
+  overflow-wrap: anywhere;
+}
 .developer-inbox-item {
   display: flex;
   align-items: flex-start;
