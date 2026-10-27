@@ -72,7 +72,7 @@ const PluginCard = memo(function PluginCard({
   const place = (
     <>
       <CategoryGlyph id={p.categoryId} size={14} />
-      {region}
+      <span className="market-locate-label">{region}</span>
     </>
   );
   return (
@@ -92,12 +92,17 @@ const PluginCard = memo(function PluginCard({
             </button>
           </h2>
           <p>
-            {p.authorName} · <span className="market-card-version">v{p.version ?? "—"}</span>
+            {/* 作者和版本过长时只截这一段，精选标签始终完整显示 */}
+            <span className="market-card-byline">
+              {p.authorName} · <span className="market-card-version">v{p.version ?? "—"}</span>
+            </span>
             {p.featured && <span className="market-card-badge">精选</span>}
           </p>
         </div>
         {onLocate === null ? (
-          <span className="market-locate">{place}</span>
+          <span className="market-locate" title={region}>
+            {place}
+          </span>
         ) : (
           <button
             type="button"

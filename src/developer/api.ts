@@ -8,14 +8,36 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * 调用方的取消信号和 15 秒超时合成一个信号。不用 AbortSignal.any / timeout：
+ * 它们分别要 Chrome 116、103 以上，一些手机浏览器的内核更旧，请求会在发出前就报错。
+ */
+async function fetchWithTimeout(path: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 15000);
+  const forward = (): void => controller.abort();
+  if (init.signal?.aborted) controller.abort();
+  init.signal?.addEventListener("abort", forward, { once: true });
+  try {
+    return await fetch(path, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (timedOut) throw new ApiError(0, "请求超时，请稍后重试。");
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    init.signal?.removeEventListener("abort", forward);
+  }
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetchWithTimeout(path, {
     ...init,
     credentials: "same-origin",
     cache: "no-store",
-    signal: init.signal
-      ? AbortSignal.any([init.signal, AbortSignal.timeout(15000)])
-      : AbortSignal.timeout(15000),
   });
   if (!response.headers.get("content-type")?.includes("application/json")) {
     throw new ApiError(response.status, "开发者服务尚未启用或暂不可用，请稍后重试。");
