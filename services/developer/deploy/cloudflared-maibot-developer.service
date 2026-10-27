@@ -1,0 +1,21 @@
+[Unit]
+Description=Dedicated Cloudflare Tunnel for plugin developer API
+After=network-online.target maibot-developer.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/cloudflared --no-autoupdate --config /etc/maibot-developer/cloudflared.yml tunnel run --token-file /etc/maibot-developer/tunnel.token
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+MemoryMax=192M
+CPUQuota=15%
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

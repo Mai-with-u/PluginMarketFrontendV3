@@ -1,0 +1,32 @@
+[Unit]
+Description=MaiBot isolated plugin developer API
+After=network-online.target maibot-developer-export.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=maibot-developer
+Group=maibot-developer
+WorkingDirectory=/opt/maibot-developer
+EnvironmentFile=/etc/maibot-developer/service.env
+ExecStart=/opt/maibot-developer/.venv/bin/python -m uvicorn developer.app:factory --factory --host 127.0.0.1 --port 10061 --no-access-log --no-proxy-headers --limit-concurrency 32 --timeout-keep-alive 5
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/maibot-developer
+ReadOnlyPaths=/var/lib/maibot-developer-source
+RestrictSUIDSGID=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=256M
+CPUQuota=25%
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+*.sqlite3*
+*.bundle
+*.tar.gz
+.ruff_cache/
+*-preview.png
+dashboard-mobile.png

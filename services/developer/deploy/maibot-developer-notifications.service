@@ -1,0 +1,20 @@
+[Unit]
+Description=Collect developer notifications from public snapshot
+After=maibot-developer.service maibot-developer-export.service
+
+[Service]
+Type=oneshot
+User=maibot-developer
+Group=maibot-developer
+WorkingDirectory=/opt/maibot-developer
+EnvironmentFile=/etc/maibot-developer/service.env
+ExecStart=/opt/maibot-developer/.venv/bin/python -m developer.notifications
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/maibot-developer
+MemoryMax=128M
+CPUQuota=10%
+TimeoutStartSec=30

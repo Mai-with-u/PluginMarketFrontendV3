@@ -5,7 +5,7 @@ const ROUTES = [
   ["GET", /^\/api\/market\/(catalog|host-releases|plugins\/[^/]+\/releases)$/],
   ["GET", /^\/api\/auth\/(session|github\/(start|callback))$/],
   ["POST", /^\/api\/auth\/logout$/],
-  ["GET", /^\/api\/developer\/(plugins|inbox)$/],
+  ["GET", /^\/api\/developer\/(plugins|inbox|claim-candidates)$/],
   ["GET", /^\/api\/developer\/plugins\/[^/]+\/releases$/],
   ["POST", /^\/api\/developer\/claims$/],
   ["POST", /^\/api\/developer\/inbox\/\d+\/read$/],

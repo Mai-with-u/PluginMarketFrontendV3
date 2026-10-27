@@ -44,6 +44,25 @@ test("release history proxies GET only and preserves backend authentication", as
   );
 });
 
+test("numeric ownership discovery uses the authenticated backend and is read only", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url, init) => {
+    assert.equal(url.pathname, "/api/developer/claim-candidates");
+    assert.equal(url.searchParams.get("after"), "test.plugin");
+    assert.equal(init.headers.get("cookie"), "__Host-pm_session=known");
+    return Response.json({ items: ["other.plugin"], next_after: null, unavailable: [] });
+  });
+  const path = origin + "/api/developer/claim-candidates?after=test.plugin";
+  const result = await worker.fetch(
+    new Request(path, {
+      headers: { Cookie: "__Host-pm_session=known" },
+    }),
+    env,
+  );
+  assert.equal(result.status, 200);
+  assert.deepEqual((await result.json()).items, ["other.plugin"]);
+  assert.equal((await worker.fetch(new Request(path, { method: "POST" }), env)).status, 404);
+});
+
 test("static catalog is independent of the API configuration", async () => {
   const result = await worker.fetch(new Request(origin + "/data/catalog.json"), {
     ASSETS: env.ASSETS,

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { Icon } from "../components/Icon.tsx";
 import { ThemeSwitch } from "../components/ThemeSwitch.tsx";
-import { ApiError, mutate, useResource } from "./api.ts";
+import { api, ApiError, mutate, useResource } from "./api.ts";
 import type { Inbox, Notice, Plugin, Resource, Session } from "./api.ts";
 import { formatCount, percent, shortDate } from "./format.ts";
 import { CLAIM_LABEL, InfoTip, Meter, PluginDetail, Stat } from "./PluginInsights.tsx";
@@ -252,6 +252,9 @@ function Dashboard({ session, signOut }: { session: Session; signOut: () => void
   const [autoClaimMessage, setAutoClaimMessage] = useState("");
   const [autoClaimFailed, setAutoClaimFailed] = useState(false);
   const [autoClaiming, setAutoClaiming] = useState(false);
+  const [candidateIds, setCandidateIds] = useState<Set<string>>(new Set());
+  const [discoveryDone, setDiscoveryDone] = useState(false);
+  const [discoveryWarning, setDiscoveryWarning] = useState("");
   const detailRef = useRef<HTMLDivElement>(null);
   const autoClaims = useRef({
     attempted: new Set<string>(),
@@ -271,11 +274,55 @@ function Dashboard({ session, signOut }: { session: Session; signOut: () => void
     revision,
   );
   useEffect(() => {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    let after = "";
+    let unavailable = 0;
+    let contentionRetries = 0;
+    const discover = async () => {
+      try {
+        const page = await api<{
+          items: string[];
+          unavailable: { id: string; detail: string }[];
+          next_after: string | null;
+        }>(`/api/developer/claim-candidates?after=${encodeURIComponent(after)}`, {
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        contentionRetries = 0;
+        setCandidateIds((previous) => new Set([...previous, ...page.items]));
+        unavailable += page.unavailable.length;
+        if (unavailable > 0)
+          setDiscoveryWarning(`${unavailable} 个市场仓库无法核验，需更新索引或联系管理员。`);
+        if (page.next_after !== null) {
+          after = page.next_after;
+          timer = setTimeout(() => void discover(), 1200);
+        } else {
+          setDiscoveryDone(true);
+        }
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && error.status === 429 && contentionRetries < 3) {
+          contentionRetries += 1;
+          timer = setTimeout(() => void discover(), 5000);
+          return;
+        }
+        setDiscoveryWarning(
+          `仓库归属核验未完成：${error instanceof Error ? error.message : "请求失败"}。请稍后重新打开页面。`,
+        );
+        setDiscoveryDone(true);
+      }
+    };
+    timer = setTimeout(() => void discover(), 0);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, []);
+  useEffect(() => {
     const progress = autoClaims.current;
     const eligible = (item: Plugin) =>
-      item.claim === null &&
-      item.repository.split("/")[0]?.toLowerCase() === session.login.toLowerCase() &&
-      !progress.attempted.has(item.id);
+      item.claim === null && candidateIds.has(item.id) && !progress.attempted.has(item.id);
     const finish = (error?: string) => {
       progress.active = false;
       setAutoClaiming(false);
@@ -293,11 +340,11 @@ function Dashboard({ session, signOut }: { session: Session; signOut: () => void
       if (!plugins?.data) return;
       const candidate = plugins.data.items.find(eligible);
       if (!candidate) {
-        if (progress.active) finish();
+        if (progress.active && discoveryDone) finish();
         return;
       }
-      // The login match only discovers candidates. The backend verifies the numeric
-      // GitHub owner ID and repository type before granting any permission.
+      // Candidates come from GitHub numeric IDs. The backend rechecks live ownership
+      // before granting permission, so cached discovery cannot authorize a transfer.
       progress.attempted.add(candidate.id);
       progress.running = true;
       progress.nextAt = Date.now() + 3500;
@@ -314,7 +361,7 @@ function Dashboard({ session, signOut }: { session: Session; signOut: () => void
         });
         if (result.status === "active") progress.claimed += 1;
         else if (result.status === "pending") progress.pending += 1;
-        if (!plugins.data.items.some(eligible)) finish();
+        if (discoveryDone && !plugins.data.items.some(eligible)) finish();
       } catch (error) {
         // Stop on failure instead of retrying in a loop or exhausting write limits.
         progress.paused = true;
@@ -330,7 +377,7 @@ function Dashboard({ session, signOut }: { session: Session; signOut: () => void
       clearTimeout(first);
       clearInterval(timer);
     };
-  }, [plugins?.data, session.csrf, session.login]);
+  }, [plugins?.data, session.csrf, candidateIds, discoveryDone]);
   useEffect(() => {
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") setRevision((value) => value + 1);
@@ -365,9 +412,7 @@ function Dashboard({ session, signOut }: { session: Session; signOut: () => void
   const mine = all.filter((item) => item.claim !== null);
   const active = mine.filter((item) => item.claim === "active");
   const organizationCandidates = all.filter(
-    (item) =>
-      item.claim === null &&
-      item.repository.split("/")[0]?.toLowerCase() !== session.login.toLowerCase(),
+    (item) => item.claim === null && !candidateIds.has(item.id),
   );
   const notices = inbox?.data?.items ?? [];
   const unreadPlugins = new Set(
@@ -404,7 +449,10 @@ function Dashboard({ session, signOut }: { session: Session; signOut: () => void
         <ThemeSwitch />
         <AccountMenu
           login={session.login}
-          status={autoClaimMessage || "个人仓库会自动核验归属并同步"}
+          status={
+            autoClaimMessage ||
+            (discoveryDone ? "个人仓库归属核验已完成" : "正在核验你的插件归属…")
+          }
           busy={busy}
           onSignOut={() => {
             void execute("/api/auth/logout", {}, "", true);
@@ -462,6 +510,14 @@ function Dashboard({ session, signOut }: { session: Session; signOut: () => void
               </div>
             )}
             {autoClaiming && <output className="developer-sync">正在同步你的个人插件…</output>}
+            {!discoveryDone && !autoClaiming && (
+              <output className="developer-sync">正在核验你的插件归属…</output>
+            )}
+            {discoveryWarning && (
+              <p className="developer-error" role="alert">
+                {discoveryWarning}
+              </p>
+            )}
             {autoClaimFailed && (
               <p className="developer-error" role="alert">
                 {autoClaimMessage}
@@ -601,7 +657,11 @@ export default function DeveloperPage() {
   if (session?.data)
     return (
       <div className="developer-page">
-        <Dashboard session={session.data} signOut={() => setRevision((value) => value + 1)} />
+        <Dashboard
+          key={session.data.id}
+          session={session.data}
+          signOut={() => setRevision((value) => value + 1)}
+        />
       </div>
     );
   return (

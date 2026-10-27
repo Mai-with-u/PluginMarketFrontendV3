@@ -1,0 +1,20 @@
+[Unit]
+Description=Export public feedback from legacy market (read only)
+After=plugin-stats-server.service
+
+[Service]
+Type=oneshot
+User=root
+Group=maibot-developer
+UMask=0027
+ExecStart=/opt/py310/bin/python /opt/maibot-developer/export_snapshot.py --database /root/plugin_stats_server/data/plugin_stats.sqlite3 --bundle /root/plugin_stats_server/data/market/bundle.json --destination /var/lib/maibot-developer-source/market.json --key-file /etc/maibot-developer/export.key
+NoNewPrivileges=true
+ProtectSystem=strict
+# SQLite WAL readers may create -shm/-wal coordination files. Main DB remains read-only.
+ReadOnlyPaths=/root/plugin_stats_server/data/plugin_stats.sqlite3 /root/plugin_stats_server/data/market
+ReadWritePaths=/var/lib/maibot-developer-source /root/plugin_stats_server/data
+PrivateTmp=true
+MemoryMax=128M
+CPUQuota=10%
+TimeoutStartSec=30
+Nice=15

@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh developer feedback snapshot every minute
+
+[Timer]
+OnBootSec=15
+OnUnitActiveSec=60
+AccuracySec=5
+Unit=maibot-developer-export.service
+
+[Install]
+WantedBy=timers.target
