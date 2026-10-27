@@ -57,6 +57,13 @@ CREATE TABLE IF NOT EXISTS repository_identities(
 CREATE TABLE IF NOT EXISTS replies(
  review_id TEXT PRIMARY KEY, plugin_id TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id),
  revision TEXT NOT NULL, body TEXT NOT NULL, updated INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS comment_fold_requests(
+ id INTEGER PRIMARY KEY, plugin_id TEXT NOT NULL, review_id TEXT NOT NULL,
+ revision TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id),
+ requester_login TEXT NOT NULL, repo_id INTEGER NOT NULL, owner_id INTEGER NOT NULL,
+ reason TEXT NOT NULL, review_snapshot TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+ created INTEGER NOT NULL, UNIQUE(plugin_id,review_id,revision,user_id));
 CREATE TABLE IF NOT EXISTS baselines(
  plugin_id TEXT NOT NULL, user_id INTEGER NOT NULL, likes INTEGER NOT NULL,
  reviews TEXT NOT NULL, PRIMARY KEY(plugin_id,user_id));

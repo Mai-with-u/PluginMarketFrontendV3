@@ -70,6 +70,51 @@ test("static catalog is independent of the API configuration", async () => {
   assert.equal(await result.text(), "static market");
 });
 
+test("comment fold applications expose only authenticated read and request routes", async (t) => {
+  t.mock.method(globalThis, "fetch", async (url, init) => {
+    assert.equal(init.headers.get("cookie"), "__Host-pm_session=known");
+    return Response.json({ status: "pending" });
+  });
+  const headers = {
+    Cookie: "__Host-pm_session=known",
+    Origin: origin,
+    "Content-Type": "application/json",
+    "X-CSRF-Token": "csrf",
+  };
+  const path =
+    origin + "/api/developer/plugins/test.plugin/reviews/" + "a".repeat(64) + "/fold-request";
+  assert.equal(
+    (await worker.fetch(new Request(path, { method: "POST", headers, body: "{}" }), env)).status,
+    200,
+  );
+  assert.equal(
+    (await worker.fetch(new Request(path, { method: "POST", body: "{}" }), env)).status,
+    403,
+  );
+  assert.equal(
+    (await worker.fetch(new Request(path, { method: "DELETE", headers }), env)).status,
+    404,
+  );
+  assert.equal(
+    (
+      await worker.fetch(
+        new Request(path + "/approve", { method: "POST", headers, body: "{}" }),
+        env,
+      )
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      await worker.fetch(
+        new Request(origin + "/api/developer/plugins/test.plugin/feedback", { headers }),
+        env,
+      )
+    ).status,
+    200,
+  );
+});
+
 test("preview, unknown paths and unauthenticated writes are rejected", async () => {
   assert.equal(
     (await worker.fetch(new Request("https://preview.workers.dev/api/auth/session"), env)).status,

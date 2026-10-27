@@ -19,6 +19,100 @@ function Rating({ value }: { value: number }) {
   );
 }
 
+function FoldRequest({
+  review,
+  pluginId,
+  session,
+  refresh,
+}: {
+  review: Review;
+  pluginId: string;
+  session: Session;
+  refresh: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const submit = async () => {
+    if (busy || !reason.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await mutate(
+        `/api/developer/plugins/${encodeURIComponent(pluginId)}/reviews/${review.id}/fold-request`,
+        session.csrf,
+        "POST",
+        { revision: review.revision, reason: reason.trim() },
+      );
+      setSubmitted(true);
+      refresh();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "申请未保存，请稍后重试");
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (review.fold_request || submitted) {
+    const status = review.fold_request?.status ?? "pending";
+    return (
+      <output className="developer-hint">
+        {status === "pending"
+          ? "已申请折叠 · 待管理员审核"
+          : status === "approved"
+            ? "折叠申请已通过"
+            : "折叠申请未通过"}
+      </output>
+    );
+  }
+  if (!open)
+    return (
+      <button type="button" className="developer-text-button" onClick={() => setOpen(true)}>
+        申请折叠评论
+      </button>
+    );
+  return (
+    <form
+      className="feedback-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+    >
+      <label htmlFor={`fold-reason-${review.id}`}>申请折叠的理由</label>
+      <textarea
+        id={`fold-reason-${review.id}`}
+        value={reason}
+        maxLength={1000}
+        required
+        disabled={busy}
+        placeholder="请说明为什么需要折叠这条评论"
+        onChange={(event) => setReason(event.target.value)}
+      />
+      <p className="developer-hint">申请会保存并等待管理员审核，评论目前仍会正常显示。</p>
+      <div className="feedback-form-actions">
+        <button
+          type="button"
+          className="developer-button is-quiet"
+          disabled={busy}
+          onClick={() => setOpen(false)}
+        >
+          取消
+        </button>
+        <button type="submit" className="developer-button" disabled={busy || !reason.trim()}>
+          {busy ? "正在提交…" : "提交申请"}
+        </button>
+      </div>
+      {error && (
+        <p className="developer-error" role="alert">
+          {error}
+        </p>
+      )}
+    </form>
+  );
+}
+
 function ReviewItem({
   review,
   pluginId,
@@ -155,6 +249,9 @@ function ReviewItem({
             )}
           </form>
         )}
+        {session && (
+          <FoldRequest review={review} pluginId={pluginId} session={session} refresh={refresh} />
+        )}
       </div>
     </article>
   );
@@ -212,7 +309,9 @@ function FeedbackContent({
   const [offset, setOffset] = useState(0);
   const [localRevision, setLocalRevision] = useState(0);
   const result = useResource<Feedback>(
-    `/api/feedback/${encodeURIComponent(pluginId)}?offset=${offset}`,
+    session
+      ? `/api/developer/plugins/${encodeURIComponent(pluginId)}/feedback?offset=${offset}`
+      : `/api/feedback/${encodeURIComponent(pluginId)}?offset=${offset}`,
     // Both counters only grow, so their sum changes whenever either one does.
     revision + localRevision,
   );

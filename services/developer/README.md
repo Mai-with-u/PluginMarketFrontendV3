@@ -31,6 +31,27 @@
 
 ## 已知边界
 
+### 评论折叠申请（仅存储）
+
+已认领且具有当前管理权限的开发者可在评论下申请折叠，必填理由（最多 1000 字）。
+申请写入独立开发者数据库的 `comment_fold_requests` 表，保存插件 ID、评论 ID/修订、
+申请人 GitHub 数字 ID 与当时用户名、仓库/所有者 ID、理由、评论快照、创建时间和 `pending` 状态。
+同一开发者对同一评论修订只能申请一次，重复提交返回原记录，不覆盖理由或重复记审计日志。
+评论修改后可对新修订重新申请，旧申请和原始证据保留。
+
+`POST /api/developer/plugins/{plugin_id}/reviews/{review_id}/fold-request` 要求会话、Origin、CSRF、
+有效认领及 GitHub 实时权限，并受写入速率限制。申请状态仅通过开发者专用反馈接口返回给本人。
+普通 `/api/feedback/{plugin_id}` 不含申请数据，申请不会改变评论、评分、计数或 MaiBot WebUI 展示。
+
+本阶段没有管理员审核接口、通知发送或实际折叠逻辑。管理员后续可基于该表实现审核，
+目前可在服务器本地只读查询待审核记录：
+
+```sql
+SELECT id, plugin_id, review_id, revision, user_id, requester_login,
+       reason, review_snapshot, created
+FROM comment_fold_requests WHERE status = 'pending' ORDER BY created, id;
+```
+
 原系统的游客 user_id 可以由客户端提供，因此旧反馈不能被视为经过 GitHub 验证的用户身份。本服务不会以它授予任何管理权限，也不会替原系统补造点赞事件。
 
 快照间隔约 60 秒，原评论删除/修改的可见性因此可能有同等延迟。超过 5 分钟未更新时拒绝读取与回复。通知代表采样间的净变化，采样间发生并撤销的行为不会记录。通知时间是收集时间。审核不是自动确认组织所有权，仍需要管理员验证申请背景。

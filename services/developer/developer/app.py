@@ -45,6 +45,12 @@ class ReplyBody(BaseModel):
     body: str = Field(min_length=1, max_length=2000)
 
 
+class FoldRequestBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    revision: str = Field(pattern=r"^[a-f0-9]{64}$")
+    reason: str = Field(min_length=1, max_length=1000)
+
+
 class GitHub:
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -323,7 +329,10 @@ def create_app(settings: Settings, github: Optional[GitHub] = None) -> FastAPI:
             raise HTTPException(401, "登录已失效，请重新登录")
         current_entry(entry)
 
-    def reviews(entry: Dict[str, Any], offset: int, limit_count: int) -> Dict[str, Any]:
+    def reviews(
+        entry: Dict[str, Any], offset: int, limit_count: int,
+        user_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
         if offset < 0 or not 1 <= limit_count <= 100:
             raise HTTPException(422, "分页参数无效")
         result = []
@@ -333,7 +342,15 @@ def create_app(settings: Settings, github: Optional[GitHub] = None) -> FastAPI:
                     "SELECT r.body,r.updated,u.login FROM replies r JOIN users u ON u.id=r.user_id JOIN claims c ON c.plugin_id=r.plugin_id AND c.user_id=r.user_id WHERE r.review_id=? AND r.revision=? AND c.status='active'",
                     (review["id"], review["revision"]),
                 ).fetchone()
-                result.append({**review, "reply": dict(reply) if reply else None})
+                item = {**review, "reply": dict(reply) if reply else None}
+                if user_id is not None:
+                    application = db.execute(
+                        "SELECT id,status,created FROM comment_fold_requests "
+                        "WHERE plugin_id=? AND review_id=? AND revision=? AND user_id=?",
+                        (entry["id"], review["id"], review["revision"], user_id),
+                    ).fetchone()
+                    item["fold_request"] = dict(application) if application else None
+                result.append(item)
         return {
             "items": result,
             "total": len(entry["reviews"]),
@@ -650,6 +667,69 @@ def create_app(settings: Settings, github: Optional[GitHub] = None) -> FastAPI:
             "snapshot_at": data["exported_at"],
             **reviews(entry, offset, limit),
         }
+
+    @app.get("/api/developer/plugins/{plugin_id}/feedback")
+    def developer_feedback(
+        plugin_id: str, request: Request, offset: int = 0, limit: int = 20,
+    ) -> Dict[str, Any]:
+        user = account(request)
+        data = snapshot()
+        entry = plugin(data, plugin_id)
+        with connect(settings) as db:
+            if db.execute(
+                "SELECT 1 FROM claims WHERE plugin_id=? AND user_id=? AND status='active'",
+                (entry["id"], user["user_id"]),
+            ).fetchone() is None:
+                raise HTTPException(403, "尚未获得此插件的管理权限")
+        return {
+            "plugin_id": entry["id"], "likes": entry["likes"], "dislikes": entry["dislikes"],
+            "snapshot_at": data["exported_at"],
+            **reviews(entry, offset, limit, user["user_id"]),
+        }
+
+    @app.post("/api/developer/plugins/{plugin_id}/reviews/{review_id}/fold-request")
+    def request_comment_fold(
+        plugin_id: str, review_id: str, body: FoldRequestBody, request: Request,
+    ) -> Dict[str, Any]:
+        user = account(request, True)
+        reason = body.reason.strip()
+        if not reason:
+            raise HTTPException(422, "请填写申请理由")
+        entry = plugin(snapshot(), plugin_id)
+        verified = authorize(entry, user)
+        with connect(settings) as db:
+            verify_write(db, entry, user, verified)
+            # Freeze the exact comment revision under review; never modify public feedback.
+            entry = current_entry(entry)
+            review = next((item for item in entry["reviews"] if item["id"] == review_id), None)
+            if review is None:
+                raise HTTPException(404, "评论已删除或不存在")
+            if review["revision"] != body.revision:
+                raise HTTPException(409, "评论已经更新，请刷新后重新申请")
+            existing = db.execute(
+                "SELECT id,status,created FROM comment_fold_requests "
+                "WHERE plugin_id=? AND review_id=? AND revision=? AND user_id=?",
+                (entry["id"], review_id, body.revision, user["user_id"]),
+            ).fetchone()
+            if existing:
+                return dict(existing)
+            now = int(time.time())
+            review_snapshot = {key: review[key] for key in (
+                "id", "revision", "comment", "rating", "username", "created_at", "updated_at",
+            )}
+            cursor = db.execute(
+                "INSERT INTO comment_fold_requests "
+                "(plugin_id,review_id,revision,user_id,requester_login,repo_id,owner_id,reason,review_snapshot,created) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (entry["id"], review_id, body.revision, user["user_id"], user["login"],
+                 verified["repo_id"], verified["owner_id"], reason,
+                 json.dumps(review_snapshot, ensure_ascii=False), now),
+            )
+            db.execute(
+                "INSERT INTO audit(actor,action,plugin_id,created) VALUES (?,?,?,?)",
+                (str(user["user_id"]), "comment_fold_request", entry["id"], now),
+            )
+            return {"id": cursor.lastrowid, "status": "pending", "created": now}
 
     @app.put("/api/developer/plugins/{plugin_id}/reviews/{review_id}/reply")
     def reply(

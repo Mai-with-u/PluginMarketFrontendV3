@@ -128,6 +128,11 @@ export interface Review {
   created_at: string;
   updated_at: string;
   reply: { body: string; login: string; updated: number } | null;
+  fold_request?: {
+    id: number;
+    status: "pending" | "approved" | "rejected";
+    created: number;
+  } | null;
 }
 export interface Feedback {
   plugin_id: string;

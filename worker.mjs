@@ -7,6 +7,8 @@ const ROUTES = [
   ["POST", /^\/api\/auth\/logout$/],
   ["GET", /^\/api\/developer\/(plugins|inbox|claim-candidates)$/],
   ["GET", /^\/api\/developer\/plugins\/[^/]+\/releases$/],
+  ["GET", /^\/api\/developer\/plugins\/[^/]+\/feedback$/],
+  ["POST", /^\/api\/developer\/plugins\/[^/]+\/reviews\/[a-f0-9]{64}\/fold-request$/],
   ["POST", /^\/api\/developer\/claims$/],
   ["POST", /^\/api\/developer\/inbox\/\d+\/read$/],
   ["GET", /^\/api\/feedback\/[^/]+$/],
