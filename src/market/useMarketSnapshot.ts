@@ -10,6 +10,7 @@ interface HostReleases {
 
 interface Snapshot {
   revision: number;
+  refreshTick: number;
   catalog?: PublicCatalog;
   releases?: HostReleases;
   catalogError?: Error;
@@ -23,6 +24,13 @@ function requestError(result: PromiseSettledResult<unknown>): Error | undefined 
 
 export function useMarketSnapshot(revision: number) {
   const [snapshot, setSnapshot] = useState<Snapshot>();
+  const [refreshTick, setRefreshTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") setRefreshTick((value) => value + 1);
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     // Catalog statistics and the host version both affect the list. Publish them
@@ -34,13 +42,18 @@ export function useMarketSnapshot(revision: number) {
       if (controller.signal.aborted) return;
       setSnapshot((previous) => ({
         revision,
+        refreshTick,
         catalog: catalog.status === "fulfilled" ? catalog.value : previous?.catalog,
         releases: releases.status === "fulfilled" ? releases.value : previous?.releases,
         catalogError: requestError(catalog),
         releasesError: requestError(releases),
       }));
+      return undefined;
     });
     return () => controller.abort();
-  }, [revision]);
-  return { snapshot, refreshing: snapshot?.revision !== revision };
+  }, [revision, refreshTick]);
+  return {
+    snapshot,
+    refreshing: snapshot?.revision !== revision || snapshot.refreshTick !== refreshTick,
+  };
 }

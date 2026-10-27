@@ -1,9 +1,8 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import type { ReactNode } from "react";
 
 import { Icon } from "../components/Icon.tsx";
-import { loadCatalog } from "../data/catalog.ts";
-import type { Catalog } from "../data/types.ts";
+import { categoryFor } from "../market/data.ts";
 import { useResource } from "./api.ts";
 import type { Notice, Plugin, Resource, Session } from "./api.ts";
 import { FeedbackPanel } from "./FeedbackPanel.tsx";
@@ -89,27 +88,6 @@ export function Stat({
         {children}
       </dd>
     </div>
-  );
-}
-
-function useCatalogEntry(plugin: Plugin) {
-  const [catalog, setCatalog] = useState<Catalog | null>(null);
-  useEffect(() => {
-    let active = true;
-    void loadCatalog().then(
-      (value) => {
-        if (active) setCatalog(value);
-        return undefined;
-      },
-      // The market index only adds the category and version; the page works without it.
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
-  return catalog?.plugins.find(
-    (entry) => entry.id === plugin.market_id || entry.manifestId === plugin.id,
   );
 }
 
@@ -239,14 +217,14 @@ export function PluginDetail({
   totalDownloads: number;
 }) {
   const [pendingReviews, setPendingReviews] = useState(0);
-  const entry = useCatalogEntry(plugin);
+  const category = plugin.manifest ? categoryFor(plugin.manifest) : undefined;
   const releases = useResource<Releases>(
     `/api/developer/plugins/${encodeURIComponent(plugin.id)}/releases`,
     revision,
   );
   const version =
     releases?.data?.items.find((release) => release.status === "published")?.version ??
-    entry?.version;
+    plugin.manifest?.version;
   const tabs: [DetailTab, string, string, boolean][] = [
     ["reviews", "评论", formatCount(plugin.comments), pendingReviews > 0],
     ["releases", "版本", releases?.data ? String(releases.data.items.length) : "", false],
@@ -269,7 +247,7 @@ export function PluginDetail({
           <h2 id="developer-detail-title">{plugin.name}</h2>
           <p>
             {version && <span className="developer-version">v{version}</span>}
-            {entry && <span>{entry.primaryCategory}</span>}
+            {category && <span>{category.label}</span>}
             {plugin.claim && plugin.claim !== "active" && (
               <span className="developer-status">{CLAIM_LABEL[plugin.claim]}</span>
             )}

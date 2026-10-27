@@ -1,24 +1,5 @@
 import type { Catalog, CatalogQuery, Category, CategoryId, Plugin, SortKey } from "./types.ts";
 
-let catalogPromise: Promise<Catalog> | null = null;
-
-/** 运行时只读 public/data/catalog.json；由 scripts/sync-data.ts 生成。 */
-export function loadCatalog(): Promise<Catalog> {
-  catalogPromise ??= fetch(`${import.meta.env.BASE_URL}data/catalog.json`).then(async (res) => {
-    if (!res.ok) {
-      throw new Error(`索引读取失败（HTTP ${res.status}）`);
-    }
-    // catalog.json 由 scripts/sync-data.ts 在构建期生成，形状在那里保证。
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-    return (await res.json()) as Catalog;
-  });
-  return catalogPromise;
-}
-
-export function retryCatalog(): void {
-  catalogPromise = null;
-}
-
 export function categoryById(catalog: Catalog, id: CategoryId): Category {
   const found = catalog.categories.find((c) => c.id === id);
   if (found === undefined) {

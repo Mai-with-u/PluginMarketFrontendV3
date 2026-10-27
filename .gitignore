@@ -47,5 +47,4 @@ logs/
 Thumbs.db
 Desktop.ini
 
-# public/data/catalog.json and public/icons/ are required runtime assets.
-# Keep them and pnpm-lock.yaml in version control.
+# Keep pnpm-lock.yaml in version control. Plugin data comes from the live API.

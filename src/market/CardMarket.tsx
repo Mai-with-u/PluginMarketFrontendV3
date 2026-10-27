@@ -13,10 +13,10 @@ import { CategoryGlyph, Icon } from "../components/Icon.tsx";
 import { Monogram } from "../components/parts.tsx";
 import { ThemeSwitch } from "../components/ThemeSwitch.tsx";
 import { queryCatalog } from "../data/catalog.ts";
-import type { Catalog, CategoryId } from "../data/types.ts";
+import type { CategoryId } from "../data/types.ts";
 import { useReducedMotion, useSearchParams } from "../hooks.ts";
 import { buildAtlas } from "../map/layout.ts";
-import { compatible, mergeCatalog, types } from "./data.ts";
+import { catalogFromLive, compatible, types } from "./data.ts";
 import type { MarketPlugin } from "./data.ts";
 import { InstallButton } from "./InstallButton.tsx";
 import { MarketMap } from "./MarketMap.tsx";
@@ -128,17 +128,15 @@ const PluginCard = memo(function PluginCard({
   );
 });
 
-export default function CardMarket({ catalog }: { catalog: Catalog }) {
+export default function CardMarket() {
   const [params, setParams] = useSearchParams();
   const [revision, setRevision] = useState(0);
   const { snapshot, refreshing } = useMarketSnapshot(revision);
   const liveData = snapshot?.catalog;
   const releases = snapshot?.releases;
-  const plugins: MarketPlugin[] = useMemo(
-    () => (liveData ? mergeCatalog(catalog, liveData) : catalog.plugins),
-    [catalog, liveData],
-  );
-  // 分区计数和地图都按当前展示的插件算：最新目录比随构建发布的目录多出的插件也要算进去
+  const catalog = useMemo(() => catalogFromLive(liveData), [liveData]);
+  const plugins = catalog.plugins;
+  // All map membership and counts come from the current server catalog.
   const ranges = useMemo(() => {
     const counts = new Map<CategoryId, number>();
     for (const p of plugins) counts.set(p.categoryId, (counts.get(p.categoryId) ?? 0) + 1);
@@ -236,8 +234,8 @@ export default function CardMarket({ catalog }: { catalog: Catalog }) {
     setFocusId(id);
     if (id !== null) document.getElementById(cardId(id))?.scrollIntoView({ block: "nearest" });
   }, []);
-  const side = mapOn && selected === undefined;
-  const showMap = selected === undefined && (mapOn || fullscreen);
+  const side = plugins.length > 0 && mapOn && selected === undefined;
+  const showMap = plugins.length > 0 && selected === undefined && (mapOn || fullscreen);
 
   const results = (
     <>
@@ -254,7 +252,7 @@ export default function CardMarket({ catalog }: { catalog: Catalog }) {
             ? "正在刷新…"
             : liveData
               ? `统计更新于 ${new Date(liveData.snapshot_at * 1000).toLocaleTimeString()}`
-              : "本地目录 · 统计不可用"}
+              : "实时目录暂不可用"}
         </span>
         {wide && !mapOn && (
           <span className="market-muted market-map-off">
@@ -272,7 +270,7 @@ export default function CardMarket({ catalog }: { catalog: Catalog }) {
       {snapshot?.catalogError && (
         <p className="market-error" role="alert">
           最新数据暂不可用：{snapshot.catalogError.message}。
-          {liveData ? "当前保留上次加载的目录与统计" : "当前显示本地目录，统计未显示"}
+          {liveData ? "当前保留上次加载的目录与统计" : "当前无法显示插件目录"}
           ；可点击刷新重试。
         </p>
       )}
@@ -305,7 +303,12 @@ export default function CardMarket({ catalog }: { catalog: Catalog }) {
         </output>
       ) : selected ? (
         <Suspense fallback={<output className="market-empty">正在打开插件详情…</output>}>
-          <PluginDetail key={selected.id} plugin={selected} onClose={() => update("p", "")} />
+          <PluginDetail
+            key={selected.id}
+            plugin={selected}
+            revision={liveData?.snapshot_at ?? 0}
+            onClose={() => update("p", "")}
+          />
         </Suspense>
       ) : (
         <>

@@ -524,6 +524,7 @@ def create_app(settings: Settings, github: Optional[GitHub] = None) -> FastAPI:
         return {
             "items": [
                 {key: entry[key] for key in fields} | {
+                    "icon_url": entry.get("icon_url"),
                     "comments": len(entry["reviews"]),
                     "updated_at": max((r.get("published_at") or "" for r in entry["releases"]), default=""),
                 } for entry in data["plugins"].values()

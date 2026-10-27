@@ -171,12 +171,15 @@ function Readme({ repository, commit }: { repository: string; commit?: string })
 export function PluginDetail({
   plugin: p,
   onClose,
+  revision,
 }: {
   plugin: MarketPlugin;
   onClose: () => void;
+  revision: number;
 }) {
   const releases = useResource<Releases>(
     `/api/market/plugins/${encodeURIComponent(p.manifestId ?? p.id)}/releases`,
+    revision,
   );
   const [version, setVersion] = useState("");
   const [tab, setTab] = useState("readme");
@@ -294,7 +297,9 @@ export function PluginDetail({
           ) : (
             <p>正在读取说明文档…</p>
           ))}
-        {tab === "feedback" && <FeedbackPanel pluginId={p.manifestId ?? p.id} />}
+        {tab === "feedback" && (
+          <FeedbackPanel pluginId={p.manifestId ?? p.id} revision={revision} />
+        )}
         {tab === "permissions" && (
           <>
             <h2>权限声明</h2>

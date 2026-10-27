@@ -5,7 +5,7 @@ HMAC key prevents guessing a guest's legacy user_id from the public review ID.
 """
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from urllib.parse import quote
 import argparse
 import hashlib
@@ -15,6 +15,18 @@ import os
 import re
 import sqlite3
 import time
+
+
+def icon_url(detail: Dict[str, Any], snapshot: str) -> Optional[str]:
+    """Expose only the registry's normalized WebP, pinned to its current commit."""
+    asset = detail.get("assets", {}).get("icon_64")
+    if asset is None:
+        return None
+    if not isinstance(asset, str) or not re.fullmatch(r"icons/[A-Za-z0-9_.-]+\.webp", asset):
+        raise ValueError("Invalid registry icon asset")
+    if not re.fullmatch(r"[a-f0-9]{40}", snapshot):
+        raise ValueError("Icon assets require a registry commit")
+    return "/api/market/icons/" + snapshot + "/" + asset.removeprefix("icons/")
 
 
 def export(
@@ -27,7 +39,8 @@ def export(
     details = {entry["id"].casefold(): entry for entry in catalog["details"]}
     plugins: Dict[str, Any] = {}
     for entry in catalog["versions"]["plugins"]:
-        manifest = details.get(entry["id"].casefold(), {}).get("manifest", {})
+        detail = details.get(entry["id"].casefold(), {})
+        manifest = detail.get("manifest", {})
         canonical = entry.get("manifest_id") or manifest.get("id") or entry["id"]
         repo = entry.get("repositoryUrl", "")
         match = re.fullmatch(
@@ -43,6 +56,7 @@ def export(
             "market_id": entry["id"],
             "name": manifest.get("name", entry["id"]),
             "repository": "/".join(match.groups()),
+            "icon_url": icon_url(detail, catalog.get("snapshot", "")),
             "likes": 0,
             "dislikes": 0,
             "downloads": 0,

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { hashString, monogram } from "../data/catalog.ts";
 import type { Plugin } from "../data/types.ts";
 import { useCopy } from "../hooks.ts";
@@ -5,13 +7,15 @@ import { Icon } from "./Icon.tsx";
 
 const PATTERNS = ["hatch", "hatch-r", "grid", "rule"] as const;
 
-/** 有图标用 webp；没有就用名称首字 + 作者哈希出的底纹，不用灰块道歉。 */
+/** 图标地址来自实时目录；未提供或加载失败时显示可辨识的名称字印。 */
 export function Monogram({ plugin, size }: { plugin: Plugin; size: "sm" | "md" | "xl" }) {
-  if (plugin.icon !== null) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  if (plugin.icon !== null && failedUrl !== plugin.icon) {
     return (
       <span className={`mono-tile mono-tile--${size} mono-tile--image`}>
         <img
-          src={`${import.meta.env.BASE_URL}icons/${plugin.icon}`}
+          src={plugin.icon}
+          onError={() => setFailedUrl(plugin.icon)}
           alt=""
           loading="lazy"
           decoding="async"
@@ -22,7 +26,11 @@ export function Monogram({ plugin, size }: { plugin: Plugin; size: "sm" | "md" |
   const h = hashString(plugin.authorLogin);
   const pattern = PATTERNS[h % PATTERNS.length] ?? "hatch";
   return (
-    <span className={`mono-tile mono-tile--${size} mono-tile--${pattern}`} aria-hidden="true">
+    <span
+      className={`mono-tile mono-tile--${size} mono-tile--${pattern}`}
+      aria-hidden="true"
+      title={failedUrl !== null && failedUrl === plugin.icon ? "图标加载失败" : undefined}
+    >
       <span className="mono-tile__char">{monogram(plugin)}</span>
       <span className="mono-tile__code">{(h % 4096).toString(16).padStart(3, "0")}</span>
     </span>

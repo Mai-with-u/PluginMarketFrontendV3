@@ -63,11 +63,16 @@ test("numeric ownership discovery uses the authenticated backend and is read onl
   assert.equal((await worker.fetch(new Request(path, { method: "POST" }), env)).status, 404);
 });
 
-test("static catalog is independent of the API configuration", async () => {
+test("retired static catalog assets return 404 instead of the SPA", async () => {
   const result = await worker.fetch(new Request(origin + "/data/catalog.json"), {
     ASSETS: env.ASSETS,
   });
-  assert.equal(await result.text(), "static market");
+  assert.equal(result.status, 404);
+  assert.equal((await worker.fetch(new Request(origin + "/icons/missing.webp"), env)).status, 404);
+  assert.equal(
+    await (await worker.fetch(new Request(origin + "/developer"), env)).text(),
+    "static market",
+  );
 });
 
 test("comment fold applications expose only authenticated read and request routes", async (t) => {

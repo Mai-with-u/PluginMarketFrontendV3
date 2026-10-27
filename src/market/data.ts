@@ -1,4 +1,4 @@
-import type { Catalog, CategoryId, Plugin } from "../data/types.ts";
+import type { Catalog, Category, CategoryId, Plugin } from "../data/types.ts";
 
 export interface Stats {
   downloads: number;
@@ -21,6 +21,7 @@ interface PublicPlugin extends Stats {
   name: string;
   repository: string;
   updated_at: string;
+  icon_url: string | null;
   manifest: {
     version?: string;
     description?: string;
@@ -85,91 +86,81 @@ export const statuses = {
   ignored: "标签未收录",
 };
 
-/** 英文单词整体算一个词，中文按相邻两字切分；标点和符号只当分隔 */
-function terms(text: string): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const word of text.toLowerCase().split(/[\s\p{P}\p{S}]+/u)) {
-    if (/^[a-z0-9]+$/.test(word)) {
-      if (word.length > 2) counts.set(word, (counts.get(word) ?? 0) + 1);
-      continue;
-    }
-    for (let i = 0; i < word.length - 1; i++) {
-      const pair = word.slice(i, i + 2);
-      counts.set(pair, (counts.get(pair) ?? 0) + 1);
-    }
-  }
-  return counts;
+export type PublicManifest = PublicPlugin["manifest"];
+
+// UI taxonomy only. Membership and counts are derived from the current manifest.
+export const categories: Category[] = [
+  { id: "entertainment", label: "娱乐互动", description: "游戏和互动", count: 0 },
+  { id: "moderation", label: "群管审核", description: "群管理和安全审核", count: 0 },
+  { id: "utility", label: "工具实用", description: "日常工具", count: 0 },
+  { id: "integration", label: "外部接入", description: "平台和服务接入", count: 0 },
+  { id: "generation", label: "内容生成", description: "创作与内容生成", count: 0 },
+  { id: "search", label: "搜索检索", description: "搜索和知识检索", count: 0 },
+  { id: "media", label: "语音多媒体", description: "音频视频与多媒体", count: 0 },
+  { id: "automation", label: "自动化", description: "自动任务和工作流", count: 0 },
+  { id: "other", label: "其他", description: "未分类插件", count: 0 },
+];
+
+export function categoryFor(manifest: PublicManifest): Category {
+  const explicit = categories.find((c) =>
+    manifest.categories?.some((v) => v === c.id || v === c.label),
+  );
+  if (explicit) return explicit;
+  const byType: Record<string, CategoryId> = {
+    adapter: "integration",
+    provider: "integration",
+    management: "moderation",
+    security: "moderation",
+    search: "search",
+    knowledge: "search",
+    creative: "generation",
+    media: "media",
+    game: "entertainment",
+    automation: "automation",
+    tool: "utility",
+  };
+  // Undeclared categories are inferred from current metadata, never an old plugin list.
+  const text = [
+    ...(manifest.categories ?? []),
+    ...(manifest.keywords ?? []),
+    manifest.description ?? "",
+  ].join(" ");
+  const inferred =
+    byType[manifest.plugin_type ?? ""] ??
+    (/群管|审核|禁言|踢人/.test(text)
+      ? "moderation"
+      : /绘图|画图|文生图|图片生成|创作/.test(text)
+        ? "generation"
+        : /语音|音乐|视频|TTS/i.test(text)
+          ? "media"
+          : /搜索|检索|知识库/.test(text)
+            ? "search"
+            : /游戏|抽签|占卜|好感|戳一戳/.test(text)
+              ? "entertainment"
+              : /定时|日程|提醒|自动化/.test(text)
+                ? "automation"
+                : /适配器|平台接入|API接入/.test(text)
+                  ? "integration"
+                  : "other");
+  const category = categories.find((c) => c.id === inferred);
+  if (!category) throw new Error("未知分类");
+  return category;
 }
 
-const describe = (name: string, keywords: string[], categories: string[], description: string) =>
-  // 名称最能说明用途，重复一次提高权重
-  [name, name, ...keywords, ...categories, description].join(" ");
-
-/**
- * 随构建发布的目录之后才上架的插件没有归一层给的分区。按名称、关键词和简介，
- * 找文字最相近的 7 个已分区插件加权投票。拿已知插件留一法验证约七成准确，
- * 只用于浏览；目录重新同步后由归一层的结果取代。
- */
-function rangeGuesser(catalog: Catalog): (text: string) => CategoryId {
-  const docs = catalog.plugins.map((p) => ({
-    range: p.categoryId,
-    terms: terms(describe(p.name, p.keywords, p.categories, p.description)),
-    weights: new Map<string, number>(),
-    norm: 1,
-  }));
-  const df = new Map<string, number>();
-  for (const doc of docs)
-    for (const term of doc.terms.keys()) df.set(term, (df.get(term) ?? 0) + 1);
-  const weigh = (counts: Map<string, number>, out: Map<string, number>) => {
-    let sum = 0;
-    for (const [term, count] of counts) {
-      const w =
-        (1 + Math.log(count)) * (Math.log((docs.length + 1) / ((df.get(term) ?? 0) + 1)) + 1);
-      out.set(term, w);
-      sum += w * w;
-    }
-    return Math.sqrt(sum) || 1;
-  };
-  for (const doc of docs) doc.norm = weigh(doc.terms, doc.weights);
-  return (text) => {
-    const query = new Map<string, number>();
-    const norm = weigh(terms(text), query);
-    const nearest = docs
-      .map((doc) => {
-        let dot = 0;
-        for (const [term, w] of query) dot += w * (doc.weights.get(term) ?? 0);
-        return { range: doc.range, score: dot / (norm * doc.norm) };
-      })
-      .toSorted((a, b) => b.score - a.score)
-      .slice(0, 7);
-    const votes = new Map<CategoryId, number>();
-    for (const { range, score } of nearest) votes.set(range, (votes.get(range) ?? 0) + score);
-    let best: CategoryId = "other";
-    let top = 0;
-    for (const [range, score] of votes)
-      if (score > top) {
-        best = range;
-        top = score;
-      }
-    return best;
-  };
-}
-
-export function mergeCatalog(catalog: Catalog, live: PublicCatalog): MarketPlugin[] {
-  const originals = new Map(catalog.plugins.map((p) => [p.id.toLowerCase(), p]));
-  const labels = new Map(catalog.categories.map((c) => [c.id, c.label]));
-  let guess: ((text: string) => CategoryId) | undefined;
-  return live.items.map((entry, index) => {
-    const old = originals.get(entry.market_id.toLowerCase());
+export function catalogFromLive(
+  live: PublicCatalog | undefined,
+): Omit<Catalog, "plugins"> & { plugins: MarketPlugin[] } {
+  const plugins: MarketPlugin[] = (live?.items ?? []).map((entry, index) => {
     const m = entry.manifest;
     const author = entry.repository.split("/")[0] ?? "";
-    // 目录里已有的插件沿用归一层的分区；新插件先看清单是否直接写了分区名，再按相似插件推断
-    const categoryId =
-      old?.categoryId ??
-      catalog.categories.find((c) => m.categories?.includes(c.label))?.id ??
-      (guess ??= rangeGuesser(catalog))(
-        describe(entry.name, m.keywords ?? [], m.categories ?? [], m.description ?? ""),
-      );
+    const category = categoryFor(m);
+    const icon = entry.icon_url;
+    if (
+      icon !== null &&
+      icon !== undefined &&
+      !/^\/api\/market\/icons\/[a-f0-9]{40}\/[A-Za-z0-9_.-]+\.webp$/.test(icon)
+    )
+      throw new Error("目录返回了无效的图标地址");
     return {
       id: entry.market_id,
       manifestId: entry.id,
@@ -178,11 +169,11 @@ export function mergeCatalog(catalog: Catalog, live: PublicCatalog): MarketPlugi
       version: m.version ?? null,
       authorName: m.author?.name ?? author,
       authorLogin: author,
-      authorUrl: `https://github.com/${author}`,
+      authorUrl: safeLink(m.author?.url) ?? `https://github.com/${author}`,
       license: m.license ?? null,
       repositoryUrl: `https://github.com/${entry.repository}`,
-      categoryId,
-      primaryCategory: old?.primaryCategory ?? labels.get(categoryId) ?? "其他",
+      categoryId: category.id,
+      primaryCategory: category.label,
       categories: m.categories ?? [],
       keywords: m.keywords ?? [],
       pluginType: m.plugin_type ?? "extension",
@@ -191,16 +182,31 @@ export function mergeCatalog(catalog: Catalog, live: PublicCatalog): MarketPlugi
       hostMax: m.host_application?.max_version ?? null,
       sdkMin: m.sdk?.min_version ?? null,
       sdkMax: m.sdk?.max_version ?? null,
-      icon: old?.icon ?? null,
+      icon: icon ?? null,
       manifestVersion: m.manifest_version ?? null,
       hasDetails: Object.keys(m).length > 0,
-      featured: old?.featured ?? false,
+      featured: false,
       catalogIndex: index,
       stats: entry,
       updatedAt: entry.updated_at,
       urls: m.urls,
     };
   });
+  return {
+    generatedAt: live?.catalog_synced_at ?? "",
+    featuredIds: [],
+    plugins,
+    categories: categories.map((c) => ({
+      ...c,
+      count: plugins.filter((p) => p.categoryId === c.id).length,
+    })),
+    counts: {
+      plugins: plugins.length,
+      details: plugins.filter((p) => p.hasDetails).length,
+      icons: plugins.filter((p) => p.icon !== null).length,
+      authors: new Set(plugins.map((p) => p.authorLogin.toLowerCase())).size,
+    },
+  };
 }
 
 // A user-entered host version is advisory; the target MaiBot rechecks actual compatibility.

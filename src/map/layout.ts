@@ -64,6 +64,14 @@ function weight(p: Plugin): number {
 }
 
 export function buildAtlas(catalog: Catalog): Atlas {
+  if (catalog.plugins.length === 0)
+    return {
+      regions: [],
+      pins: [],
+      pinById: new Map(),
+      tour: [],
+      bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+    };
   const max = Math.max(...catalog.categories.map((c) => c.count));
   const regions: Region[] = catalog.categories.map((c) => {
     const site = SITES[c.id];

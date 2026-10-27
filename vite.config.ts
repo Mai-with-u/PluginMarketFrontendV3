@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     port: 5180,
     strictPort: true,
+    proxy: { "/api/market": { target: "https://plugin.maibot.chat", changeOrigin: true } },
   },
   preview: {
     port: 5180,

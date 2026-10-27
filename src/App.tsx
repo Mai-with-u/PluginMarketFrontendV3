@@ -1,16 +1,10 @@
-import { Component, lazy, Suspense, use } from "react";
+import { Component, lazy, Suspense } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 
 import { Icon, LogoMark } from "./components/Icon.tsx";
-import { loadCatalog, retryCatalog } from "./data/catalog.ts";
 
 const DeveloperPage = lazy(() => import("./developer/DeveloperPage.tsx"));
 const CardMarket = lazy(() => import("./market/CardMarket.tsx"));
-
-function Depot() {
-  const catalog = use(loadCatalog());
-  return <CardMarket catalog={catalog} />;
-}
 
 function Boot() {
   return (
@@ -42,14 +36,12 @@ class CatalogBoundary extends Component<{ children: ReactNode }, { error: Error 
       <div className="boot boot--error" role="alert">
         <Icon name="warn" size={36} />
         <p className="boot__title">索引没读出来</p>
-        <p className="boot__body">
-          {this.state.error.message}。检查网络后重试；本地开发时确认已执行 pnpm sync:data。
-        </p>
+        <p className="boot__body">{this.state.error.message}。请检查网络后重试。</p>
         <button
           type="button"
           className="btn btn--signal"
           onClick={() => {
-            retryCatalog();
+            window.location.reload();
             this.setState({ error: null });
           }}
         >
@@ -72,7 +64,7 @@ export function App() {
     <>
       <CatalogBoundary>
         <Suspense fallback={<Boot />}>
-          <Depot />
+          <CardMarket />
         </Suspense>
       </CatalogBoundary>
     </>

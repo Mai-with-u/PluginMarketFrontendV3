@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import type { PublicManifest } from "../market/data.ts";
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -107,6 +109,7 @@ export interface Session {
   csrf: string;
 }
 export interface Plugin {
+  manifest?: PublicManifest;
   id: string;
   market_id: string;
   name: string;

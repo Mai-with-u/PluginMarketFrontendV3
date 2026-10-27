@@ -6,8 +6,9 @@
 
 ```text
 浏览器 → plugin.maibot.chat
-  /、静态插件目录 → Worker Static Assets
-  /api/auth/*、/api/developer/*、/api/feedback/*
+  /、前端脚本 → Worker Static Assets
+  /api/market/icons/{commit}/{file}.webp → Worker → 官方注册仓库的版本化图标
+  /api/market/*、/api/auth/*、/api/developer/*、/api/feedback/*
     → Worker（固定路由、密钥）→ 专用 Cloudflare Tunnel
       → 127.0.0.1:10061 → 开发者 SQLite
 
@@ -16,7 +17,7 @@
               开发者服务只读快照
 ```
 
-原统计服务的代码、索引生成、游客统计接口和数据库表均不需要修改。新服务不直接访问原数据库；只有独立导出任务读取评价和投票。静态索引没有开发者服务依赖，服务故障仅影响登录/反馈功能。
+原统计服务的代码、索引生成、游客统计接口和数据库表均不需要修改。新服务不直接访问原数据库；只有独立导出任务读取评价和投票。网页版公开目录也由实时只读接口提供，不再发布构建时目录和图标。服务故障时网页明确显示加载失败；原统计服务和 MaiBot 本地插件市场不受影响。
 
 ## 已实现
 

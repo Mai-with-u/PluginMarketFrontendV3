@@ -276,10 +276,6 @@ export function MarketMap({
       </div>
       <ul className="market-map-legend" aria-label="标记说明">
         <li>
-          <i className="is-featured" />
-          精选
-        </li>
-        <li>
           <i />
           清单已同步
         </li>
