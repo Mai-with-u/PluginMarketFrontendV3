@@ -524,6 +524,8 @@ def create_app(settings: Settings, github: Optional[GitHub] = None) -> FastAPI:
         return {
             "items": [
                 {key: entry[key] for key in fields} | {
+                    # Snapshots exported before rating_score existed fall back to the plain average.
+                    "rating_score": entry.get("rating_score", entry["rating"]),
                     "icon_url": entry.get("icon_url"),
                     "comments": len(entry["reviews"]),
                     "updated_at": max((r.get("published_at") or "" for r in entry["releases"]), default=""),

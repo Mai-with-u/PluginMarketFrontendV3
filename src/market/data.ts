@@ -7,6 +7,8 @@ export interface Stats {
   likes: number;
   dislikes: number;
   rating: number;
+  /** Decayed and shrunk toward the site mean; used only for ranking. */
+  rating_score: number;
   rating_count: number;
   comments: number;
 }

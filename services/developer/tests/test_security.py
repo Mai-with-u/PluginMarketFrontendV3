@@ -1,3 +1,4 @@
+from datetime import datetime
 from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 from pathlib import Path
@@ -408,6 +409,52 @@ def test_blocked_ip_does_not_consume_global_budget(setup):
             db.execute("SELECT count FROM rate_limits WHERE key='60:global'").fetchone()
             is None
         )
+
+
+def test_export_decays_ratings_by_later_published_releases(tmp_path):
+    legacy = tmp_path / "legacy.db"
+    with sqlite3.connect(legacy) as db:
+        db.executescript(
+            "CREATE TABLE plugin_download_events(plugin_id TEXT,created_at TEXT,counted INTEGER); CREATE TABLE plugin_votes(plugin_id TEXT,user_id TEXT,vote INTEGER); CREATE TABLE plugin_ratings(plugin_id TEXT,user_id TEXT,comment TEXT,rating INTEGER,created_at TEXT,updated_at TEXT,username TEXT,anonymous INTEGER);"
+        )
+        # The old rating (1) is followed by two published releases; the new one (5) by none.
+        for user, rating, moment in (("a", 1, "2026-01-01T00:00:00+00:00"), ("b", 5, "2026-09-01T00:00:00+00:00")):
+            db.execute(
+                "INSERT INTO plugin_ratings VALUES ('test.plugin',?,NULL,?,?,?,'x',1)",
+                (user, rating, moment, moment),
+            )
+    def release(tag, published_at, **flags):
+        return {"version": tag, "tag": tag, "published_at": published_at, **flags}
+    bundle = tmp_path / "bundle.json"
+    bundle.write_text(json.dumps({
+        "synced_at": "now", "details": [],
+        "versions": {"plugins": [{
+            "id": "test.plugin", "repositoryUrl": "https://github.com/owner/repo",
+            "versions": [
+                release("1.0", "2025-12-01T00:00:00+00:00"),
+                release("1.1", "2026-02-01T00:00:00+00:00"),
+                release("1.2", "2026-03-01T00:00:00+00:00"),
+                release("1.3", "2026-04-01T00:00:00+00:00", yanked=True),
+                release("1.4", "2026-05-01T00:00:00+00:00", prerelease=True),
+            ],
+        }]},
+    }))
+    payload = export(legacy, bundle, tmp_path / "market.json", b"k" * 32)
+    plugin = payload["plugins"]["test.plugin"]
+    now = payload["exported_at"] / 86400 + 2440587.5
+
+    def weight(text, newer):
+        moment = datetime.fromisoformat(text).timestamp() / 86400 + 2440587.5
+        return max(0.2, 0.85**newer * 0.5 ** ((now - moment) / 365))
+
+    # 1.1 and 1.2 follow the old rating; yanked and prerelease versions do not count.
+    old = weight("2026-01-01T00:00:00+00:00", 2)
+    fresh = weight("2026-09-01T00:00:00+00:00", 0)
+    average = (old * 1 + fresh * 5) / (old + fresh)
+    assert plugin["rating_count"] == 2
+    assert plugin["rating"] == round(average, 2)
+    # A single plugin is its own site-wide prior, so shrinkage leaves its score unchanged.
+    assert plugin["rating_score"] == round(average, 3)
 
 
 def test_export_redacts_identifiers_and_never_changes_legacy(tmp_path):

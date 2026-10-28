@@ -34,7 +34,7 @@ const PluginDetail = lazy(() =>
 const score = (p: MarketPlugin | undefined) =>
   Math.log10((p?.stats?.downloads ?? 0) + 1) * 4 +
   Math.log10((p?.stats?.likes ?? 0) + 1) * 3 +
-  (p?.stats?.rating ?? 0) * Math.log10((p?.stats?.rating_count ?? 0) + 2) +
+  (p?.stats?.rating_score ?? 0) * Math.log10((p?.stats?.rating_count ?? 0) + 2) +
   Number(p?.featured ?? false);
 
 const MAP_KEY = "market-map";
@@ -199,8 +199,10 @@ export default function CardMarket() {
           y = stats.get(b.id);
         if (sort === "name") return a.name.localeCompare(b.name, "zh-CN");
         if (sort === "latest") return (y?.updatedAt ?? "").localeCompare(x?.updatedAt ?? "");
-        if (sort === "downloads" || sort === "likes" || sort === "rating")
+        if (sort === "downloads" || sort === "likes")
           return (y?.stats?.[sort] ?? -1) - (x?.stats?.[sort] ?? -1);
+        if (sort === "rating")
+          return (y?.stats?.rating_score ?? -1) - (x?.stats?.rating_score ?? -1);
         return score(y) - score(x);
       })
       .map<MarketPlugin>((p) => stats.get(p.id) ?? p);

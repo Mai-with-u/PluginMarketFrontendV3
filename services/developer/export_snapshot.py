@@ -4,6 +4,7 @@ Only public review fields and aggregate votes leave the legacy database. The
 HMAC key prevents guessing a guest's legacy user_id from the public review ID.
 """
 
+from bisect import bisect_right
 from pathlib import Path
 from typing import Any, Dict, Optional
 from urllib.parse import quote
@@ -15,6 +16,12 @@ import os
 import re
 import sqlite3
 import time
+
+
+RELEASE_DECAY = 0.85
+RATING_WEIGHT_FLOOR = 0.2
+RATING_PRIOR_WEIGHT = 3
+RATING_HALF_LIFE_DAYS = 365
 
 
 def icon_url(detail: Dict[str, Any], snapshot: str) -> Optional[str]:
@@ -63,6 +70,7 @@ def export(
             "downloads_7d": 0,
             "downloads_30d": 0,
             "rating": 0,
+            "rating_score": 0,
             "rating_count": 0,
             "manifest": {field: manifest[field] for field in (
                 "id", "name", "description", "version", "author", "license", "urls",
@@ -134,12 +142,47 @@ def export(
                 plugins[row["plugin_id"]][
                     "likes" if row["vote"] == 1 else "dislikes"
                 ] = row["n"]
+        # A rating loses weight for every published release after it and for every day it ages.
+        # julianday() keeps timestamp parsing identical to the queries above.
+        now = exported_at / 86400 + 2440587.5
+        published: Dict[str, list] = {}
+        for plugin_id, plugin in plugins.items():
+            moments = [
+                db.execute("SELECT julianday(?)", (r["published_at"],)).fetchone()[0]
+                for r in plugin["releases"]
+                if r["status"] == "published" and r["published_at"]
+            ]
+            published[plugin_id] = sorted(m for m in moments if m is not None)
+        raw: Dict[str, list] = {}
         for row in db.execute(
-            "SELECT plugin_id, AVG(rating) AS rating, COUNT(rating) AS rating_count "
-            "FROM plugin_ratings WHERE rating IS NOT NULL GROUP BY plugin_id"
+            "SELECT plugin_id, rating, julianday(COALESCE(updated_at, created_at)) AS moment "
+            "FROM plugin_ratings WHERE rating IS NOT NULL"
         ):
-            if row["plugin_id"] in plugins:
-                plugins[row["plugin_id"]].update(rating=round(row["rating"], 2), rating_count=row["rating_count"])
+            if row["plugin_id"] not in plugins:
+                continue
+            moments = published[row["plugin_id"]]
+            if row["moment"] is None:
+                weight = 1.0
+            else:
+                newer = len(moments) - bisect_right(moments, row["moment"])
+                age = max(0.0, now - row["moment"])
+                weight = max(
+                    RATING_WEIGHT_FLOOR,
+                    RELEASE_DECAY ** newer * 0.5 ** (age / RATING_HALF_LIFE_DAYS),
+                )
+            total = raw.setdefault(row["plugin_id"], [0.0, 0.0, 0])
+            total[0] += weight * row["rating"]
+            total[1] += weight
+            total[2] += 1
+        # Shrink toward the site-wide mean so a lone 5-star rating cannot outrank a well-rated plugin.
+        prior = sum(t[0] for t in raw.values()) / sum(t[1] for t in raw.values()) if raw else 0
+        for plugin_id, (weighted, weights, count) in raw.items():
+            # rating is what users see; rating_score is only for ranking. rating_count stays the raw raters.
+            plugins[plugin_id].update(
+                rating=round(weighted / weights, 2),
+                rating_score=round((weighted + RATING_PRIOR_WEIGHT * prior) / (weights + RATING_PRIOR_WEIGHT), 3),
+                rating_count=count,
+            )
         for row in db.execute(
             "SELECT * FROM plugin_ratings WHERE comment IS NOT NULL AND TRIM(comment) != ''"
         ):
