@@ -17,6 +17,8 @@ const UPDATE_BOOST_WINDOW_DAYS = 14;
 const GROWTH_BOOST_RANK_LIMIT = 8;
 const GROWTH_BOOST_WEIGHT_7D = 1;
 const GROWTH_BOOST_WEIGHT_30D = 0.6;
+// 本体没有这一项：有图标的插件略微加分，只在分数接近时起到决定作用。
+const ICON_BOOST_WEIGHT = 0.5;
 const MS_PER_HOUR = 60 * 60 * 1000;
 const MS_PER_DAY = 24 * MS_PER_HOUR;
 
@@ -125,7 +127,8 @@ export function rankPlugins(plugins: MarketPlugin[], now: number, seed: string):
         launchBoost(part.p, now) +
         updateBoost(part.p, now) +
         growth(part.p) +
-        freshnessBoost(part.p, now),
+        freshnessBoost(part.p, now) +
+        (part.p.icon ? ICON_BOOST_WEIGHT : 0),
     }))
     .toSorted(
       (a, b) => b.score - a.score || b.fresh - a.fresh || a.p.name.localeCompare(b.p.name, "zh-CN"),
