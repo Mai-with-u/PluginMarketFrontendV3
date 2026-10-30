@@ -30,6 +30,19 @@ def digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+def release_times(releases: list) -> Dict[str, Optional[str]]:
+    """Listing time inputs: first release is the launch; a newest stable one counts as an update
+    only when there are at least two stable releases (a single one is just the first listing)."""
+    dated = [r for r in releases if r.get("published_at")]
+    stable = sorted(
+        r["published_at"] for r in dated if r["status"] not in ("prerelease", "yanked")
+    )
+    return {
+        "published_at": min((r["published_at"] for r in dated), default=None),
+        "last_update_at": stable[-1] if len(stable) >= 2 else None,
+    }
+
+
 def secure_equal(left: str, right: str) -> bool:
     return secrets.compare_digest(left.encode("utf-8"), right.encode("utf-8"))
 
@@ -529,6 +542,7 @@ def create_app(settings: Settings, github: Optional[GitHub] = None) -> FastAPI:
                     "icon_url": entry.get("icon_url"),
                     "comments": len(entry["reviews"]),
                     "updated_at": max((r.get("published_at") or "" for r in entry["releases"]), default=""),
+                    **release_times(entry["releases"]),
                 } for entry in data["plugins"].values()
             ],
             "snapshot_at": data["exported_at"],

@@ -21,6 +21,7 @@ import type { MarketPlugin } from "./data.ts";
 import { InstallButton } from "./InstallButton.tsx";
 import { MarketMap } from "./MarketMap.tsx";
 import type { MapMode } from "./MarketMap.tsx";
+import { rankPlugins } from "./ranking.ts";
 import { useMarketSnapshot } from "./useMarketSnapshot.ts";
 
 import "../developer/developer.css";
@@ -31,11 +32,19 @@ const PluginDetail = lazy(() =>
   import("./PluginDetail.tsx").then((module) => ({ default: module.PluginDetail })),
 );
 
-const score = (p: MarketPlugin | undefined) =>
-  Math.log10((p?.stats?.downloads ?? 0) + 1) * 4 +
-  Math.log10((p?.stats?.likes ?? 0) + 1) * 3 +
-  (p?.stats?.rating_score ?? 0) * Math.log10((p?.stats?.rating_count ?? 0) + 2) +
-  Number(p?.featured ?? false);
+// 同一浏览器会话沿用抽选种子，返回列表或重新渲染时不重新抽选推荐位。
+const SURPRISE_SEED_KEY = "market-surprise-seed";
+const surpriseSeed = () => {
+  try {
+    const saved = sessionStorage.getItem(SURPRISE_SEED_KEY);
+    if (saved) return saved;
+    const seed = Math.random().toString(36).slice(2);
+    sessionStorage.setItem(SURPRISE_SEED_KEY, seed);
+    return seed;
+  } catch {
+    return "fixed";
+  }
+};
 
 const MAP_KEY = "market-map";
 /** 窄于这个宽度没有侧栏地图，只能全屏打开 */
@@ -193,19 +202,19 @@ export default function CardMarket() {
           (Number(p.manifestVersion) >= 2 && compatible(host, p.hostMin, p.hostMax))),
     );
     const stats = new Map(plugins.map((p) => [p.id, p]));
-    return filtered
-      .toSorted((a, b) => {
-        const x = stats.get(a.id),
-          y = stats.get(b.id);
-        if (sort === "name") return a.name.localeCompare(b.name, "zh-CN");
-        if (sort === "latest") return (y?.updatedAt ?? "").localeCompare(x?.updatedAt ?? "");
-        if (sort === "downloads" || sort === "likes")
-          return (y?.stats?.[sort] ?? -1) - (x?.stats?.[sort] ?? -1);
-        if (sort === "rating")
-          return (y?.stats?.rating_score ?? -1) - (x?.stats?.rating_score ?? -1);
-        return score(y) - score(x);
-      })
-      .map<MarketPlugin>((p) => stats.get(p.id) ?? p);
+    const listed = filtered.map<MarketPlugin>((p) => stats.get(p.id) ?? p);
+    if (
+      sort === "recommended" ||
+      !["name", "latest", "downloads", "likes", "rating"].includes(sort)
+    )
+      return rankPlugins(listed, Date.now(), surpriseSeed());
+    return listed.toSorted((x, y) => {
+      if (sort === "name") return x.name.localeCompare(y.name, "zh-CN");
+      if (sort === "latest") return (y.updatedAt ?? "").localeCompare(x.updatedAt ?? "");
+      if (sort === "rating") return (y.stats?.rating_score ?? -1) - (x.stats?.rating_score ?? -1);
+      const field = sort as "downloads" | "likes";
+      return (y.stats?.[field] ?? -1) - (x.stats?.[field] ?? -1);
+    });
   }, [plugins, search, category, type, sort, host, onlyCompatible, canCheck]);
   const filtering =
     search.trim() !== "" || category !== null || type !== "all" || (onlyCompatible && canCheck);

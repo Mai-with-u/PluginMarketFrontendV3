@@ -15,6 +15,10 @@ export interface Stats {
 export interface MarketPlugin extends Plugin {
   stats?: Stats;
   updatedAt?: string;
+  /** 最早一个版本的发布时间（上架时间）。 */
+  publishedAt?: string | null;
+  /** 至少两个正式版本时，最新正式版本的发布时间；否则为空。 */
+  lastUpdateAt?: string | null;
   urls?: Record<string, string>;
 }
 interface PublicPlugin extends Stats {
@@ -23,6 +27,8 @@ interface PublicPlugin extends Stats {
   name: string;
   repository: string;
   updated_at: string;
+  published_at?: string | null;
+  last_update_at?: string | null;
   icon_url: string | null;
   manifest: {
     version?: string;
@@ -191,6 +197,8 @@ export function catalogFromLive(
       catalogIndex: index,
       stats: entry,
       updatedAt: entry.updated_at,
+      publishedAt: entry.published_at ?? null,
+      lastUpdateAt: entry.last_update_at ?? null,
       urls: m.urls,
     };
   });
