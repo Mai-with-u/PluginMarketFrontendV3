@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
-import type { CategoryId } from "../data/types.ts";
+import type { RegionId } from "../data/types.ts";
 import {
   camera,
   FOCAL,
@@ -78,11 +78,11 @@ export function MapView({
   matchIds: ReadonlySet<string> | null;
   selectedId: string | null;
   hoverId?: string | null;
-  activeRegion: CategoryId | null;
+  activeRegion: RegionId | null;
   onSelect: (id: string) => void;
   onHover?: (id: string | null) => void;
   onRegion: (region: Region) => void;
-  onHoverRegion: (id: CategoryId | null) => void;
+  onHoverRegion: (id: RegionId | null) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);

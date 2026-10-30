@@ -38,7 +38,7 @@ export const camera: {
 export const mapSignals = {
   focus: { x: 0, y: 0, on: false },
   focusStrength: 0,
-  /** 9 个分区：x, y, 高度, 高亮(0/1) */
+  /** 最多 14 个地图区域：x, y, 高度, 高亮(0/1) */
   regions: [] as [number, number, number, number][],
   /** 有插件的区域（minX, minY, maxX, maxY）；立体时网格只铺到它外面一圈 */
   bounds: [-1e5, -1e5, 1e5, 1e5] as [number, number, number, number],

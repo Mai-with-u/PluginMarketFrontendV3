@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "../components/Icon.tsx";
 import { MapView } from "../components/MapView.tsx";
 import { Monogram } from "../components/parts.tsx";
-import type { CategoryId } from "../data/types.ts";
+import type { CategoryId, RegionId } from "../data/types.ts";
 import { FieldBackdrop } from "../gpu/FieldBackdrop.tsx";
 import { useReducedMotion } from "../hooks.ts";
 import {
@@ -136,7 +136,7 @@ export function MarketMap({
 }) {
   const rootRef = useRef<HTMLElement>(null);
   const reducedMotion = useReducedMotion();
-  const [hoverRegion, setHoverRegion] = useState<CategoryId | null>(null);
+  const [hoverRegion, setHoverRegion] = useState<RegionId | null>(null);
   const focus = focusId === null ? null : (atlas.pinById.get(focusId) ?? null);
   const region = category === null ? null : atlas.regions.find((r) => r.id === category);
   const activeRegion = hoverRegion ?? category ?? focus?.region.id ?? null;
@@ -232,7 +232,9 @@ export function MarketMap({
         activeRegion={activeRegion}
         onSelect={(id) => onFocus(id === focusId ? null : id)}
         onHover={onHover}
-        onRegion={(r) => onCategory(r.id)}
+        onRegion={(r) => {
+          if (r.id !== "uncategorized") onCategory(r.id);
+        }}
         onHoverRegion={setHoverRegion}
       />
       {focus !== null && (

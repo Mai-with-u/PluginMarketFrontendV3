@@ -1,4 +1,4 @@
-import type { Catalog, CategoryId, Plugin } from "../data/types.ts";
+import type { Catalog, Plugin, RegionId } from "../data/types.ts";
 
 /**
  * 地形图布局。世界坐标单位是缩放为 1 时的 CSS px。
@@ -7,7 +7,7 @@ import type { Catalog, CategoryId, Plugin } from "../data/types.ts";
  */
 
 export interface Region {
-  id: CategoryId;
+  id: RegionId;
   label: string;
   latin: string;
   description: string;
@@ -38,17 +38,22 @@ export interface Atlas {
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
 }
 
-/** 手工排的山脉走向：工具实用居中为主峰，“其他”是东边的小岛 */
-const SITES: Record<CategoryId, { x: number; y: number; latin: string }> = {
-  entertainment: { x: 248, y: 323, latin: "Entertainment" },
-  moderation: { x: -56, y: 930, latin: "Moderation" },
-  utility: { x: 1013, y: 640, latin: "Utility" },
-  integration: { x: 1832, y: 996, latin: "Integration" },
-  generation: { x: 1026, y: 6, latin: "Generation" },
-  search: { x: 1805, y: 270, latin: "Search" },
-  media: { x: 1092, y: 1274, latin: "Media" },
-  automation: { x: 419, y: 1128, latin: "Automation" },
-  other: { x: 2307, y: 627, latin: "Miscellany" },
+/** 每个类别独立布局；无类别仅作为地图展示区域。 */
+const SITES: Record<RegionId, { x: number; y: number; latin: string }> = {
+  adapter: { x: 0, y: 0, latin: "Adapter" },
+  tool: { x: 650, y: 0, latin: "Tool" },
+  provider: { x: 1300, y: 0, latin: "Provider" },
+  management: { x: 1950, y: 0, latin: "Management" },
+  data: { x: 2600, y: 0, latin: "Data" },
+  media: { x: 0, y: 700, latin: "Media" },
+  game: { x: 650, y: 700, latin: "Game" },
+  integration: { x: 1300, y: 700, latin: "Integration" },
+  other: { x: 1950, y: 700, latin: "Other" },
+  chat: { x: 2600, y: 700, latin: "Chat" },
+  creative: { x: 0, y: 1400, latin: "Creative" },
+  automation: { x: 650, y: 1400, latin: "Automation" },
+  deskpet: { x: 1300, y: 1400, latin: "Deskpet" },
+  uncategorized: { x: 2300, y: 1450, latin: "Uncategorized" },
 };
 
 const SPACING = 27;
@@ -72,8 +77,22 @@ export function buildAtlas(catalog: Catalog): Atlas {
       tour: [],
       bounds: { minX: 0, minY: 0, maxX: 1, maxY: 1 },
     };
-  const max = Math.max(...catalog.categories.map((c) => c.count));
-  const regions: Region[] = catalog.categories.map((c) => {
+  const unclassified = catalog.plugins.filter((p) => p.categoryId === null).length;
+  const mapCategories = [
+    ...catalog.categories,
+    ...(unclassified
+      ? [
+          {
+            id: "uncategorized" as const,
+            label: "无类别",
+            description: "未分类插件",
+            count: unclassified,
+          },
+        ]
+      : []),
+  ];
+  const max = Math.max(...mapCategories.map((c) => c.count));
+  const regions: Region[] = mapCategories.map((c) => {
     const site = SITES[c.id];
     return {
       id: c.id,
@@ -92,7 +111,7 @@ export function buildAtlas(catalog: Catalog): Atlas {
   const tour: Pin[] = [];
   regions.forEach((region, ri) => {
     const members = catalog.plugins
-      .filter((p) => p.categoryId === region.id)
+      .filter((p) => (p.categoryId ?? "uncategorized") === region.id)
       .toSorted((a, b) => weight(b) - weight(a) || a.catalogIndex - b.catalogIndex);
     members.forEach((plugin, rank) => {
       const r = SPACING * Math.sqrt(rank + 0.5);

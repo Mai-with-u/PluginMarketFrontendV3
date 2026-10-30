@@ -40,6 +40,7 @@ interface PublicPlugin extends Stats {
     keywords?: string[];
     categories?: string[];
     plugin_type?: string;
+    type?: string;
     capabilities?: string[];
     urls?: Record<string, string>;
     manifest_version?: number;
@@ -71,20 +72,20 @@ export interface Releases {
   mode: string;
   catalog_synced_at: string;
 }
-export const types: Record<string, string> = {
+export const types: Record<CategoryId, string> = {
   adapter: "适配器",
-  chat: "聊天",
-  creative: "创作",
+  tool: "工具",
   provider: "服务提供方",
   management: "管理",
-  search: "检索搜索",
-  knowledge: "知识",
+  data: "数据与知识",
   media: "媒体",
   game: "游戏娱乐",
-  security: "安全防护",
-  automation: "自动化",
-  extension: "通用扩展",
+  integration: "外部集成",
   other: "其他",
+  chat: "聊天",
+  creative: "创作",
+  automation: "自动化",
+  deskpet: "桌宠",
 };
 export const statuses = {
   published: "已收录",
@@ -96,63 +97,21 @@ export const statuses = {
 
 export type PublicManifest = PublicPlugin["manifest"];
 
-// UI taxonomy only. Membership and counts are derived from the current manifest.
-export const categories: Category[] = [
-  { id: "entertainment", label: "娱乐互动", description: "游戏和互动", count: 0 },
-  { id: "moderation", label: "群管审核", description: "群管理和安全审核", count: 0 },
-  { id: "utility", label: "工具实用", description: "日常工具", count: 0 },
-  { id: "integration", label: "外部接入", description: "平台和服务接入", count: 0 },
-  { id: "generation", label: "内容生成", description: "创作与内容生成", count: 0 },
-  { id: "search", label: "搜索检索", description: "搜索和知识检索", count: 0 },
-  { id: "media", label: "语音多媒体", description: "音频视频与多媒体", count: 0 },
-  { id: "automation", label: "自动化", description: "自动任务和工作流", count: 0 },
-  { id: "other", label: "其他", description: "未分类插件", count: 0 },
-];
+// 分类只依据清单类型，避免根据描述推测未分类插件的用途。
+export const categories: Category[] = (Object.entries(types) as [CategoryId, string][]).map(
+  ([id, label]) => ({ id, label, description: label, count: 0 }),
+);
 
-export function categoryFor(manifest: PublicManifest): Category {
-  const explicit = categories.find((c) =>
-    manifest.categories?.some((v) => v === c.id || v === c.label),
-  );
-  if (explicit) return explicit;
-  const byType: Record<string, CategoryId> = {
-    adapter: "integration",
-    provider: "integration",
-    management: "moderation",
-    security: "moderation",
-    search: "search",
-    knowledge: "search",
-    creative: "generation",
-    media: "media",
-    game: "entertainment",
-    automation: "automation",
-    tool: "utility",
+export function categoryFor(manifest: PublicManifest): Category | null {
+  const type = (manifest.plugin_type ?? manifest.type)?.trim().toLowerCase();
+  if (!type || type === "extension") return null;
+  const aliases: Record<string, CategoryId> = {
+    knowledge: "data",
+    entertainment: "game",
+    search: "integration",
   };
-  // Undeclared categories are inferred from current metadata, never an old plugin list.
-  const text = [
-    ...(manifest.categories ?? []),
-    ...(manifest.keywords ?? []),
-    manifest.description ?? "",
-  ].join(" ");
-  const inferred =
-    byType[manifest.plugin_type ?? ""] ??
-    (/群管|审核|禁言|踢人/.test(text)
-      ? "moderation"
-      : /绘图|画图|文生图|图片生成|创作/.test(text)
-        ? "generation"
-        : /语音|音乐|视频|TTS/i.test(text)
-          ? "media"
-          : /搜索|检索|知识库/.test(text)
-            ? "search"
-            : /游戏|抽签|占卜|好感|戳一戳/.test(text)
-              ? "entertainment"
-              : /定时|日程|提醒|自动化/.test(text)
-                ? "automation"
-                : /适配器|平台接入|API接入/.test(text)
-                  ? "integration"
-                  : "other");
-  const category = categories.find((c) => c.id === inferred);
-  if (!category) throw new Error("未知分类");
-  return category;
+  const id = aliases[type] ?? (Object.hasOwn(types, type) ? (type as CategoryId) : "other");
+  return categories.find((category) => category.id === id) ?? null;
 }
 
 export function catalogFromLive(
@@ -180,11 +139,11 @@ export function catalogFromLive(
       authorUrl: safeLink(m.author?.url) ?? `https://github.com/${author}`,
       license: m.license ?? null,
       repositoryUrl: `https://github.com/${entry.repository}`,
-      categoryId: category.id,
-      primaryCategory: category.label,
+      categoryId: category?.id ?? null,
+      primaryCategory: category?.label ?? "无类别",
       categories: m.categories ?? [],
       keywords: m.keywords ?? [],
-      pluginType: m.plugin_type ?? "extension",
+      pluginType: category?.id ?? null,
       capabilities: m.capabilities ?? [],
       hostMin: m.host_application?.min_version ?? null,
       hostMax: m.host_application?.max_version ?? null,

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "developer-mock",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "vite", "--config", ".cache/devmock/vite.mock.config.mjs"],
+      "port": 5181
+    }
+  ]
+}

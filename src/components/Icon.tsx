@@ -45,16 +45,20 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 }
 
 const GLYPHS: Record<CategoryId, string> = {
-  entertainment: "M12 3 21 12 12 21 3 12ZM12 8.5v.01M8.5 12h.01M15.5 12h.01M12 15.5v.01",
-  moderation: "M12 3 20 6v6c0 4.5-3.4 7.7-8 9-4.6-1.3-8-4.5-8-9V6ZM8 12h8",
-  utility: "M4 4h6v6H4zM14 14h6v6h-6zM14 4h6v6h-6zM4 17h6",
-  integration: "M3 9h7v6H3zM14 9h7v6h-7zM10 12h4M6.5 5v4M17.5 15v4",
-  generation:
-    "M12 3c.6 4.4 2.6 6.4 7 7-4.4.6-6.4 2.6-7 7-.6-4.4-2.6-6.4-7-7 4.4-.6 6.4-2.6 7-7ZM19 17v4M17 19h4",
-  search: "M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12ZM14.5 14.5 20 20M10 2v3M10 15v3M2 10h3M15 10h3",
+  adapter: "M3 9h7v6H3zM14 9h7v6h-7zM10 12h4M6.5 5v4M17.5 15v4",
+  tool: "M4 4h6v6H4zM14 14h6v6h-6zM14 4h6v6h-6zM4 17h6",
+  provider: "M4 17h16M5 17a4 4 0 0 1 0-8 7 7 0 0 1 13-1 4.5 4.5 0 0 1 1 9",
+  management: "M12 3 20 6v6c0 4.5-3.4 7.7-8 9-4.6-1.3-8-4.5-8-9V6ZM8 12h8",
+  data: "M4 6c0-3 16-3 16 0v12c0 3-16 3-16 0zM4 6c0 3 16 3 16 0M4 12c0 3 16 3 16 0",
   media: "M4 10v4M8 6v12M12 9v6M16 4v16M20 8v8",
-  automation: "M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4M12 8v4l3 2",
+  game: "M12 3 21 12 12 21 3 12ZM12 8.5v.01M8.5 12h.01M15.5 12h.01M12 15.5v.01",
+  integration: "M3 9h7v6H3zM14 9h7v6h-7zM10 12h4M6.5 5v4M17.5 15v4",
   other: "M4 4h16v16H4zM8 12h.01M12 12h.01M16 12h.01",
+  chat: "M4 5h16v12H9l-5 3zM8 10h8M8 13h5",
+  creative:
+    "M12 3c.6 4.4 2.6 6.4 7 7-4.4.6-6.4 2.6-7 7-.6-4.4-2.6-6.4-7-7 4.4-.6 6.4-2.6 7-7ZM19 17v4M17 19h4",
+  automation: "M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4M12 8v4l3 2",
+  deskpet: "M5 9 4 4l5 3h6l5-3-1 5v7l-3 4H8l-3-4zM9 12h.01M15 12h.01M10 16h4",
 };
 
 export function CategoryGlyph({ id, size = 22 }: { id: CategoryId; size?: number }) {

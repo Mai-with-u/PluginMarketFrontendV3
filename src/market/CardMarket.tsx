@@ -16,7 +16,7 @@ import { queryCatalog } from "../data/catalog.ts";
 import type { CategoryId } from "../data/types.ts";
 import { useReducedMotion, useSearchParams } from "../hooks.ts";
 import { buildAtlas } from "../map/layout.ts";
-import { catalogFromLive, compatible, types } from "./data.ts";
+import { catalogFromLive, categoryFor, compatible, types } from "./data.ts";
 import type { MarketPlugin } from "./data.ts";
 import { InstallButton } from "./InstallButton.tsx";
 import { MarketMap } from "./MarketMap.tsx";
@@ -80,7 +80,7 @@ const PluginCard = memo(function PluginCard({
 }) {
   const place = (
     <>
-      <CategoryGlyph id={p.categoryId} size={14} />
+      {p.categoryId !== null && <CategoryGlyph id={p.categoryId} size={14} />}
       <span className="market-locate-label">{region}</span>
     </>
   );
@@ -148,7 +148,9 @@ export default function CardMarket() {
   // All map membership and counts come from the current server catalog.
   const ranges = useMemo(() => {
     const counts = new Map<CategoryId, number>();
-    for (const p of plugins) counts.set(p.categoryId, (counts.get(p.categoryId) ?? 0) + 1);
+    for (const p of plugins) {
+      if (p.categoryId !== null) counts.set(p.categoryId, (counts.get(p.categoryId) ?? 0) + 1);
+    }
     // 没有插件的分区不出现在筛选里，也不在地图上留一座空山
     return catalog.categories
       .map((c) => ({ ...c, count: counts.get(c.id) ?? 0 }))
@@ -164,9 +166,23 @@ export default function CardMarket() {
   );
   const q = params.get("q") ?? "";
   const search = useDeferredValue(q);
-  const type = params.get("type") ?? "all";
+  const savedType = params.get("type");
+  const type =
+    savedType === null || savedType === "all"
+      ? "all"
+      : (categoryFor({ plugin_type: savedType })?.id ?? "all");
   const sort = params.get("sort") ?? "recommended";
-  const category = ranges.find((c) => c.id === params.get("cat"))?.id ?? null;
+  const oldRegions: Record<string, CategoryId> = {
+    entertainment: "game",
+    moderation: "management",
+    utility: "tool",
+    generation: "creative",
+    search: "integration",
+  };
+  const savedCategory = params.get("cat");
+  const mappedCategory =
+    savedCategory === null ? null : (oldRegions[savedCategory] ?? savedCategory);
+  const category = ranges.find((c) => c.id === mappedCategory)?.id ?? null;
   const mode: MapMode = params.get("mode") === "3d" ? "3d" : "2d";
   const requestedHost = params.get("host");
   const host = releases?.items.some((item) => item.version === requestedHost)
@@ -196,7 +212,7 @@ export default function CardMarket() {
     const filtered = found.filter(
       (p) =>
         (category === null || p.categoryId === category) &&
-        (type === "all" || (p.pluginType ?? "extension") === type) &&
+        (type === "all" || p.categoryId === type) &&
         (!onlyCompatible ||
           !canCheck ||
           (Number(p.manifestVersion) >= 2 && compatible(host, p.hostMin, p.hostMax))),
@@ -470,7 +486,9 @@ export default function CardMarket() {
                     <PluginCard
                       key={p.id}
                       plugin={p}
-                      region={regionLabel.get(p.categoryId) ?? "其他"}
+                      region={
+                        p.categoryId === null ? "无类别" : (regionLabel.get(p.categoryId) ?? "其他")
+                      }
                       state={p.id === focusId ? "focus" : p.id === hoverId ? "hot" : "idle"}
                       incompatible={canCheck && !isCompatible(p)}
                       onOpen={open}

@@ -125,7 +125,7 @@ export function startField(gpu: Gpu, canvas: HTMLCanvasElement, opts: FieldOptio
   const budgetDpr = Math.sqrt(PIXEL_BUDGET / Math.max(1, innerWidth * innerHeight));
   const dpr = Math.max(1, Math.min(1.5, devicePixelRatio, budgetDpr));
   const target = surface(gpu, canvas, { dpr, alphaMode: "opaque" });
-  const regions: Vec4[] = Array.from({ length: 9 }, (_, i): Vec4 => [
+  const regions: Vec4[] = Array.from({ length: 14 }, (_, i): Vec4 => [
     ...(mapSignals.regions[i] ?? [0, 0, 0, 0]),
   ]);
   const focus: Vec4 = [0, 0, 0, 0];
@@ -228,7 +228,7 @@ export function startField(gpu: Gpu, canvas: HTMLCanvasElement, opts: FieldOptio
       focus[2] += ((f.on ? 1 : 0) - focus[2]) * ease;
       mapSignals.focusStrength = focus[2];
       if (Math.abs(focus[2] - before) > 1e-3 && reliefOf() > 0) emitCamera();
-      for (let i = 0; i < 9; i++) {
+      for (let i = 0; i < 14; i++) {
         const src = mapSignals.regions[i];
         const dst = regions[i];
         if (src === undefined || dst === undefined) continue;

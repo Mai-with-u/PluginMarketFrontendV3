@@ -102,6 +102,7 @@ export function relatedPlugins(catalog: Catalog, plugin: Plugin, limit = 4): Plu
     (p) =>
       p.id !== plugin.id &&
       p.authorLogin !== plugin.authorLogin &&
+      plugin.categoryId !== null &&
       p.categoryId === plugin.categoryId &&
       p.hasDetails,
   );

@@ -1,13 +1,19 @@
 export type CategoryId =
-  | "entertainment"
-  | "moderation"
-  | "utility"
-  | "integration"
-  | "generation"
-  | "search"
+  | "adapter"
+  | "tool"
+  | "provider"
+  | "management"
+  | "data"
   | "media"
+  | "game"
+  | "integration"
+  | "other"
+  | "chat"
+  | "creative"
   | "automation"
-  | "other";
+  | "deskpet";
+
+export type RegionId = CategoryId | "uncategorized";
 
 export interface Category {
   id: CategoryId;
@@ -27,7 +33,7 @@ export interface Plugin {
   authorLogin: string;
   license: string | null;
   repositoryUrl: string | null;
-  categoryId: CategoryId;
+  categoryId: CategoryId | null;
   primaryCategory: string;
   categories: string[];
   keywords: string[];

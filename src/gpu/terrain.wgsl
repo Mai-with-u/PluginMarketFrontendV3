@@ -4,7 +4,7 @@
 import { fbmSimplex2d } from "@vgpu/wgsl-std/noise/simplex";
 
 struct Scene {
-  regions: array<vec4f, 9>,
+  regions: array<vec4f, 14>,
   focus: vec4f,
   // 有插件的区域 minX, minY, maxX, maxY；立体时区域外渐隐，网格也只铺到外面一圈
   dataBounds: vec4f,
@@ -49,7 +49,7 @@ fn mountains(w: vec2f) -> vec3f {
   var h = 0.0;
   var mass = 0.0;
   var glow = 0.0;
-  for (var i = 0u; i < 9u; i++) {
+  for (var i = 0u; i < 14u; i++) {
     let r = u.regions[i];
     let d = w - r.xy;
     let d2 = dot(d, d);

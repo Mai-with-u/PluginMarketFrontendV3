@@ -247,7 +247,7 @@ export function PluginDetail({
           <h2 id="developer-detail-title">{plugin.name}</h2>
           <p>
             {version && <span className="developer-version">v{version}</span>}
-            {category && <span>{category.label}</span>}
+            {plugin.manifest && <span>{category?.label ?? "无类别"}</span>}
             {plugin.claim && plugin.claim !== "active" && (
               <span className="developer-status">{CLAIM_LABEL[plugin.claim]}</span>
             )}
