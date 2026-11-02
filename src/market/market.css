@@ -321,6 +321,19 @@
   align-items: center;
   gap: 6px;
   color: var(--text-3);
+  /* 与 CardMarket 的 MAP_HINT_MS 对齐：最后 0.4 秒向右滑出并淡出 */
+  animation: market-hint-out 0.4s ease-in 9.6s forwards;
+}
+@keyframes market-hint-out {
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .market-map-off {
+    animation: none;
+  }
 }
 .market-grid {
   display: grid;

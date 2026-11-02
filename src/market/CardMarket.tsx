@@ -4,6 +4,7 @@ import {
   Suspense,
   useCallback,
   useDeferredValue,
+  useEffect,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -48,6 +49,7 @@ const surpriseSeed = () => {
 };
 
 const MAP_KEY = "market-map";
+const MAP_HINT_MS = 10_000;
 /** 窄于这个宽度没有侧栏地图，只能全屏打开 */
 const WIDE = "(min-width: 1024px)";
 const subscribeWide = (onChange: () => void) => {
@@ -262,9 +264,18 @@ export default function CardMarket() {
   const focusId =
     focusChoice !== null && (matchIds === null || matchIds.has(focusChoice)) ? focusChoice : null;
   const mapOn = wide && (mapPreference ?? ("gpu" in navigator && !reducedMotion));
+  // 「地图已关闭」只是一次性说明，显示 10 秒后移走；重新开关地图时再出现一次
+  const mapOffHint = wide && !mapOn;
+  const [hintExpired, setHintExpired] = useState(false);
+  useEffect(() => {
+    if (!mapOffHint) return undefined;
+    const timer = setTimeout(() => setHintExpired(true), MAP_HINT_MS);
+    return () => clearTimeout(timer);
+  }, [mapOffHint]);
   const setMap = (on: boolean) => {
     localStorage.setItem(MAP_KEY, on ? "on" : "off");
     setMapPreference(on);
+    setHintExpired(false);
     if (!on) setFullscreen(false);
   };
   const open = useCallback((id: string) => update("p", id), [update]);
@@ -293,7 +304,7 @@ export default function CardMarket() {
               ? `统计更新于 ${new Date(liveData.snapshot_at * 1000).toLocaleTimeString()}`
               : "实时目录暂不可用"}
         </span>
-        {wide && !mapOn && (
+        {mapOffHint && !hintExpired && (
           <span className="market-muted market-map-off">
             <Icon name="check" size={13} />
             地图已关闭，不加载 WebGPU
