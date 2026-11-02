@@ -5,6 +5,8 @@ export interface PluginGroup {
   label: string;
   /** 匹配作者在清单里声明的名称、标签和类别（能力字段是宿主接口名，不代表主题，不参与）；不读简介，避免凭描述猜用途。 */
   terms: string[];
+  /** 额外在简介里匹配的明确用语；简介噪音大，只给清单常漏填关键词的组开启。 */
+  descriptionTerms?: string[];
 }
 
 // 常用插件组按使用场景聚合，与「类型」互不干扰；新增一组只需在这里加一项。
@@ -12,6 +14,7 @@ export const pluginGroups: PluginGroup[] = [
   {
     id: "image",
     label: "生图",
+    descriptionTerms: ["生图", "绘图", "文生图", "图生图", "画图"],
     terms: [
       "生图",
       "绘图",
@@ -111,7 +114,15 @@ const matcher = (terms: string[]) =>
     "i",
   );
 
-const matchers = new Map(pluginGroups.map((g) => [g.id, matcher(g.terms)]));
+const matchers = new Map(
+  pluginGroups.map((g) => [
+    g.id,
+    {
+      meta: matcher(g.terms),
+      description: g.descriptionTerms ? matcher(g.descriptionTerms) : null,
+    },
+  ]),
+);
 
 export function inGroup(plugin: MarketPlugin, groupId: string): boolean {
   const re = matchers.get(groupId);
@@ -122,5 +133,5 @@ export function inGroup(plugin: MarketPlugin, groupId: string): boolean {
     ...plugin.keywords,
     ...plugin.categories,
   ].join("\n");
-  return re.test(haystack);
+  return re.meta.test(haystack) || (re.description?.test(plugin.description) ?? false);
 }
