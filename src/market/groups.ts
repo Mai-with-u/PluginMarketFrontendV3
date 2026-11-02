@@ -58,21 +58,6 @@ export const pluginGroups: PluginGroup[] = [
     ],
   },
   {
-    id: "search",
-    label: "联网搜索",
-    terms: [
-      "联网",
-      "搜索",
-      "网络搜索",
-      "搜图",
-      "web search",
-      "web-search",
-      "search",
-      "tavily",
-      "searxng",
-    ],
-  },
-  {
     id: "memory",
     label: "记忆与人设",
     terms: [
@@ -107,24 +92,6 @@ export const pluginGroups: PluginGroup[] = [
       "ban",
       "kick",
       "blacklist",
-    ],
-  },
-  {
-    id: "schedule",
-    label: "日程提醒",
-    terms: [
-      "日程",
-      "提醒",
-      "定时",
-      "闹钟",
-      "待办",
-      "日历",
-      "schedule",
-      "reminder",
-      "remind",
-      "calendar",
-      "todo",
-      "cron",
     ],
   },
   {
