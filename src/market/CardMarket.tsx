@@ -18,6 +18,7 @@ import { useReducedMotion, useSearchParams } from "../hooks.ts";
 import { buildAtlas } from "../map/layout.ts";
 import { catalogFromLive, categoryFor, compatible, types } from "./data.ts";
 import type { MarketPlugin } from "./data.ts";
+import { inGroup, pluginGroups } from "./groups.ts";
 import { InstallButton } from "./InstallButton.tsx";
 import { MarketMap } from "./MarketMap.tsx";
 import type { MapMode } from "./MarketMap.tsx";
@@ -183,6 +184,12 @@ export default function CardMarket() {
   const mappedCategory =
     savedCategory === null ? null : (oldRegions[savedCategory] ?? savedCategory);
   const category = ranges.find((c) => c.id === mappedCategory)?.id ?? null;
+  const savedGroup = params.get("group");
+  const group = pluginGroups.find((g) => g.id === savedGroup)?.id ?? null;
+  const groupCounts = useMemo(
+    () => new Map(pluginGroups.map((g) => [g.id, plugins.filter((p) => inGroup(p, g.id)).length])),
+    [plugins],
+  );
   const mode: MapMode = params.get("mode") === "3d" ? "3d" : "2d";
   const requestedHost = params.get("host");
   const host = releases?.items.some((item) => item.version === requestedHost)
@@ -213,6 +220,7 @@ export default function CardMarket() {
       (p) =>
         (category === null || p.categoryId === category) &&
         (type === "all" || p.categoryId === type) &&
+        (group === null || inGroup(p, group)) &&
         (!onlyCompatible ||
           !canCheck ||
           (Number(p.manifestVersion) >= 2 && compatible(host, p.hostMin, p.hostMax))),
@@ -231,9 +239,13 @@ export default function CardMarket() {
       const field = sort as "downloads" | "likes";
       return (y.stats?.[field] ?? -1) - (x.stats?.[field] ?? -1);
     });
-  }, [plugins, search, category, type, sort, host, onlyCompatible, canCheck]);
+  }, [plugins, search, category, type, group, sort, host, onlyCompatible, canCheck]);
   const filtering =
-    search.trim() !== "" || category !== null || type !== "all" || (onlyCompatible && canCheck);
+    search.trim() !== "" ||
+    category !== null ||
+    group !== null ||
+    type !== "all" ||
+    (onlyCompatible && canCheck);
   const matchIds = useMemo(
     () => (filtering ? new Set(matches.map((p) => p.id)) : null),
     [filtering, matches],
@@ -270,9 +282,9 @@ export default function CardMarket() {
         <strong>
           {onlyCompatible && !canCheck
             ? "等待版本信息"
-            : category === null
+            : category === null && group === null
               ? `${matches.length} 个插件`
-              : `${regionLabel.get(category)} · ${matches.length} 个插件`}
+              : `${[category && regionLabel.get(category), group && pluginGroups.find((g) => g.id === group)?.label].filter(Boolean).join(" · ")} · ${matches.length} 个插件`}
         </strong>
         <span className="market-muted">
           {refreshing
@@ -455,6 +467,20 @@ export default function CardMarket() {
               </button>
             ))}
           </nav>
+          <nav className="market-groups" aria-label="常用插件组">
+            <span className="market-groups-label">常用组</span>
+            {pluginGroups.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                aria-pressed={group === g.id}
+                onClick={() => update("group", group === g.id ? "" : g.id)}
+              >
+                {g.label}
+                <span>{groupCounts.get(g.id) ?? 0}</span>
+              </button>
+            ))}
+          </nav>
           <div className="market-workspace">
             <section className="market-list" aria-label="插件列表">
               {results}
@@ -471,7 +497,8 @@ export default function CardMarket() {
                       className="market-secondary"
                       onClick={() =>
                         setParams((p) => {
-                          for (const key of ["q", "type", "compatible", "cat"]) p.delete(key);
+                          for (const key of ["q", "type", "compatible", "cat", "group"])
+                            p.delete(key);
                         })
                       }
                     >

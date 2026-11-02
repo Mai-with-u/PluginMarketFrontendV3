@@ -245,6 +245,45 @@
   opacity: 0.7;
 }
 
+.market-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.market-groups-label {
+  margin-right: 4px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.market-groups button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.market-groups button:hover {
+  background: var(--bg-2);
+  color: var(--text);
+}
+.market-groups button[aria-pressed="true"] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg-1);
+}
+.market-groups span:not(.market-groups-label) {
+  font: 11px var(--font-mono);
+  opacity: 0.7;
+}
+
 /* ------------------------------------------------------------ 列表 */
 .market-workspace {
   display: flex;
