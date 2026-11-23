@@ -93,7 +93,9 @@ function Callout({
           查看详情
           <Icon name="arrowRight" size={14} />
         </button>
-        <InstallButton pluginId={plugin.id} label="安装" />
+        {plugin.version && (
+          <InstallButton pluginId={plugin.id} version={plugin.version} label="安装" />
+        )}
       </div>
     </section>
   );

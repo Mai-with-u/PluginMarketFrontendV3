@@ -14,7 +14,7 @@ def test_download_windows_and_public_release_projection(tmp_path, monkeypatch):
         db.executescript(
             "CREATE TABLE plugin_download_events(plugin_id TEXT,created_at TEXT,counted INTEGER);"
             "CREATE TABLE plugin_votes(plugin_id TEXT,vote INTEGER);"
-            "CREATE TABLE plugin_ratings(plugin_id TEXT,comment TEXT,rating INTEGER);"
+            "CREATE TABLE plugin_ratings(plugin_id TEXT,comment TEXT,rating INTEGER,created_at TEXT,updated_at TEXT);"
         )
         for seconds, counted, plugin in [
             (1, 1, "test.plugin"), (7 * 86400, 1, "test.plugin"),
@@ -79,3 +79,20 @@ def test_public_catalog_is_read_only_and_excludes_review_and_account_data(setup)
     assert "reviews" not in public and "claim" not in public and "user_id" not in public
     assert client.get("/api/market/plugins/test.plugin/releases").status_code == 200
     assert client.post("/api/market/catalog").status_code in (403, 405)
+
+
+def test_market_default_version_only_uses_published_releases(setup):
+    settings, payload, _, client = setup
+    payload["catalog_synced_at"] = "2026-11-23T00:00:00Z"
+    entry = payload["plugins"]["test.plugin"]
+    entry.update(manifest={"version": "1.0.1"}, downloads=0, downloads_7d=0, downloads_30d=0,
+                 rating=0, rating_count=0, release_mode="releases",
+                 releases=[{"version": "1.0.1", "status": "rejected"},
+                           {"version": "2.0.0", "status": "prerelease"},
+                           {"version": "1.0.0", "status": "published"}])
+    for expected in ("1.0.0", None):
+        settings.snapshot.write_text(json.dumps(payload))
+        catalog = client.get("/api/market/catalog").json()["items"][0]
+        releases = client.get("/api/market/plugins/test.plugin/releases").json()
+        assert catalog["default_version"] == releases["default_version"] == expected
+        entry["releases"].pop()

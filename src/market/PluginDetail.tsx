@@ -183,9 +183,16 @@ export function PluginDetail({
   );
   const [version, setVersion] = useState("");
   const [tab, setTab] = useState("readme");
+  const available =
+    releases?.data?.items.filter(
+      (r) => r.version && (r.status === "published" || r.status === "prerelease"),
+    ) ?? [];
   const selected =
-    releases?.data?.items.find((r) => r.tag === version) ??
-    releases?.data?.items.find((r) => r.status === "published");
+    available.find((r) => r.version === version) ??
+    available.find(
+      (r) => r.status === "published" && r.version === releases?.data?.default_version,
+    );
+  const installVersion = releases?.data ? selected?.version : p.version;
   const repository =
     p.repositoryUrl?.replace("https://github.com/", "").replace(/\.git$/, "") ?? "";
   return (
@@ -204,7 +211,7 @@ export function PluginDetail({
         </div>
       </div>
       <div className="market-actions">
-        <InstallButton pluginId={p.id} version={selected?.version ?? undefined} />
+        {installVersion && <InstallButton pluginId={p.id} version={installVersion} />}
         <InstallButton pluginId={p.id} label="管理 / 评价此插件" detailOnly />
         <CopyRepoButton url={p.repositoryUrl} variant="ghost" />
         <a
@@ -237,7 +244,7 @@ export function PluginDetail({
       </div>
       <dl className="market-specs">
         {[
-          ["版本", selected?.version ?? p.version ?? "未声明"],
+          ["版本", installVersion ?? "暂无正式版"],
           [
             "适用 MaiBot",
             selected
@@ -327,22 +334,23 @@ export function PluginDetail({
                   {releases.data.mode === "branch" ? "使用分支版本" : "发布版本"}
                 </p>
                 {releases.data.items.length === 0 && <p>暂无 release 记录。</p>}
-                {releases.data.items.some(
-                  (r) => r.status === "published" || r.status === "prerelease",
-                ) && (
+                {available.length > 0 && (
                   <label>
                     选择版本{" "}
                     <select
-                      value={version || selected?.tag || ""}
+                      value={selected?.version ?? ""}
                       onChange={(e) => setVersion(e.target.value)}
                     >
-                      {releases.data.items
-                        .filter((r) => r.status === "published" || r.status === "prerelease")
-                        .map((r) => (
-                          <option key={r.tag} value={r.tag ?? ""}>
-                            {r.version} · {statuses[r.status]}
-                          </option>
-                        ))}
+                      {!selected && (
+                        <option value="" disabled>
+                          请选择版本
+                        </option>
+                      )}
+                      {available.map((r) => (
+                        <option key={r.tag ?? r.version} value={r.version ?? ""}>
+                          {r.version} · {statuses[r.status]}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 )}

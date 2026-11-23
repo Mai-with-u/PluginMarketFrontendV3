@@ -24,6 +24,7 @@ export interface MarketPlugin extends Plugin {
 interface PublicPlugin extends Stats {
   id: string;
   market_id: string;
+  default_version: string | null;
   name: string;
   repository: string;
   updated_at: string;
@@ -69,6 +70,7 @@ export interface Release {
 }
 export interface Releases {
   items: Release[];
+  default_version: string | null;
   mode: string;
   catalog_synced_at: string;
 }
@@ -133,7 +135,7 @@ export function catalogFromLive(
       manifestId: entry.id,
       name: entry.name,
       description: m.description ?? "",
-      version: m.version ?? null,
+      version: entry.default_version ?? null,
       authorName: m.author?.name ?? author,
       authorLogin: author,
       authorUrl: safeLink(m.author?.url) ?? `https://github.com/${author}`,

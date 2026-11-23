@@ -30,6 +30,11 @@ def digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+def default_version(entry: dict) -> Optional[str]:
+    return next((r["version"] for r in entry["releases"]
+                 if r.get("status") == "published" and r.get("version")), None)
+
+
 def release_times(releases: list) -> Dict[str, Optional[str]]:
     """Listing time inputs: first release is the launch; a newest stable one counts as an update
     only when there are at least two stable releases (a single one is just the first listing)."""
@@ -540,6 +545,7 @@ def create_app(settings: Settings, github: Optional[GitHub] = None) -> FastAPI:
                     # Snapshots exported before rating_score existed fall back to the plain average.
                     "rating_score": entry.get("rating_score", entry["rating"]),
                     "icon_url": entry.get("icon_url"),
+                    "default_version": default_version(entry),
                     "comments": len(entry["reviews"]),
                     "updated_at": max((r.get("published_at") or "" for r in entry["releases"]), default=""),
                     **release_times(entry["releases"]),
@@ -555,6 +561,7 @@ def create_app(settings: Settings, github: Optional[GitHub] = None) -> FastAPI:
         entry = plugin(data, plugin_id)
         return {
             "items": entry["releases"],
+            "default_version": default_version(entry),
             "mode": entry["release_mode"],
             "catalog_synced_at": data["catalog_synced_at"],
         }

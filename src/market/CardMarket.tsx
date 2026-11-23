@@ -106,7 +106,10 @@ const PluginCard = memo(function PluginCard({
           <p>
             {/* 作者和版本过长时只截这一段，精选标签始终完整显示 */}
             <span className="market-card-byline">
-              {p.authorName} · <span className="market-card-version">v{p.version ?? "—"}</span>
+              {p.authorName} ·{" "}
+              <span className="market-card-version">
+                {p.version ? `v${p.version}` : "暂无正式版"}
+              </span>
             </span>
             {p.featured && <span className="market-card-badge">精选</span>}
           </p>
@@ -134,7 +137,7 @@ const PluginCard = memo(function PluginCard({
           ★ {p.stats?.rating_count ? p.stats.rating.toFixed(1) : "—"}
         </span>
         {incompatible && <span className="market-incompatible">清单不兼容</span>}
-        <InstallButton pluginId={p.id} label="安装" />
+        {p.version && <InstallButton pluginId={p.id} version={p.version} label="安装" />}
       </div>
     </article>
   );
